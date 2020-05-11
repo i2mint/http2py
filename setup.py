@@ -22,7 +22,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     # download_url='https://github.com/i2mint/{name}/archive/v{version}.zip',
-    keywords=['web services', 'http', 'requests', 'API'],
+    keywords=['webservice', 'http', 'requests', 'API'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         # Either
