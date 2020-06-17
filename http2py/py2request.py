@@ -60,7 +60,7 @@ def _ensure_list(x):
     return x
 
 
-def mk_request_function(method_spec):
+def mk_request_function(method_spec, *, function_kind='method'):
     """
     Makes function that will make http requests for you, on your own terms.
 
@@ -102,6 +102,9 @@ def mk_request_function(method_spec):
     # defaults
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
+    method_spec['output_trans'] = method_spec.get('output_trans', None) or {}
+    method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
+
     request_kwargs = method_spec.get('request_kwargs', {}).copy()
     method = method_spec.pop('method',
                              request_kwargs.pop('method',
@@ -117,7 +120,7 @@ def mk_request_function(method_spec):
     wraps_func = method_spec.pop('wraps', None)
 
     # TODO: inject a signature, and possibly a __doc__ in this function
-    def request_func(self, *args, **kwargs):
+    def request_func(*args, **kwargs):
 
         kwargs = dict(kwargs, **{argname: argval for argname, argval in zip(func_args, args)})
 
@@ -151,11 +154,20 @@ def mk_request_function(method_spec):
         r = request(method, url, **_request_kwargs)
         return output_trans(r)
 
+    if function_kind == 'method':
+        _request_func = request_func
+
+        def request_func(self, *args, **kwargs):
+            return _request_func(*args, **kwargs)
+
     if wraps_func:
         return wraps(wraps_func)(request_func)
     else:
         if func_args:
-            set_signature_of_func(request_func, ['self'] + func_args)
+            if function_kind == 'method':
+                set_signature_of_func(request_func, ['self'] + func_args)
+            elif function_kind == 'function':
+                set_signature_of_func(request_func, func_args)
 
     request_func.original_spec = original_spec
     request_func.func_args = func_args
@@ -334,6 +346,43 @@ class UrlMethodSpecsMaker:
                 map(lambda kv: f'{kv[0]}={{{kv[1]}}}', url_queries.items()))
             d = {'url_template': url_template, 'args': list(url_queries.values())}
         return dict(d, **self.constant_items)
+
+
+def raw_response_on_error(func):
+    """A useful output trans decorator that will return the raw response if the output_trans raises
+    an error.
+    The response object will also contain the error that was raised,
+    in the response.output_trans_error attribute."""
+
+    @wraps(func)
+    def _func(response):
+        try:
+            return func(response)
+        except BaseException as e:
+            response.output_trans_error = e
+            return response
+
+    return _func
+
+
+def mk_request_func_from_openapi_spec(openapi_spec, method='post', input_trans=None, output_trans=None):
+    base_url = openapi_spec['servers'][0]['url']
+    if base_url.endswith('/'):
+        base_url = base_url[:-1]  # TODO: need a urljoin instead of this hack!
+    path_name, path_spec = next(iter(openapi_spec['paths'].items()))
+    url = base_url + path_name
+    path_name, path_spec = next(iter(openapi_spec['paths'].items()))
+    method = method or next(iter(path_spec))
+    spec = path_spec[method]
+    method_spec = dict(
+        method=method, url_template=url, input_trans=input_trans, output_trans=output_trans,
+        json_arg_names=list(spec['requestBody']['content']['application/json']['schema']['properties']),
+    )
+
+    return mk_request_function(method_spec, function_kind='function')
+
+
+mk_request_function.from_openapi_spec = mk_request_func_from_openapi_spec
 
 # def mk_request_method(method_spec):
 #     """
