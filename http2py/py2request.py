@@ -18,6 +18,7 @@ Are you enjoying yourself?
 There must be a better way...
 """
 from functools import wraps
+from glom import glom
 from requests import request
 import string
 
@@ -60,7 +61,7 @@ def _ensure_list(x):
     return x
 
 
-def mk_request_function(method_spec, *, function_kind='method'):
+def mk_request_function(method_spec, *, function_kind='method', dispatch=request):
     """
     Makes function that will make http requests for you, on your own terms.
 
@@ -151,7 +152,7 @@ def mk_request_function(method_spec, *, function_kind='method'):
             elif debug == 'return_request_kwargs':
                 return _request_kwargs
 
-        r = request(method, url, **_request_kwargs)
+        r = dispatch(method, url, **_request_kwargs)
         return output_trans(r)
 
     if function_kind == 'method':
@@ -173,6 +174,9 @@ def mk_request_function(method_spec, *, function_kind='method'):
     request_func.func_args = func_args
     request_func.debug = debug
     request_func.method_spec = method_spec
+    funcname = original_spec.get('x-method_name', None)
+    if funcname:
+        request_func.__name__ = funcname
 
     return request_func
 
@@ -365,7 +369,21 @@ def raw_response_on_error(func):
     return _func
 
 
-def mk_request_func_from_openapi_spec(openapi_spec, method='post', input_trans=None, output_trans=None):
+def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
+                                            method='post',
+                                            url_template='',
+                                            content_type='application/json',
+                                            input_trans=None,
+                                            output_trans=None):
+    method_spec = dict(
+        method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
+        json_arg_names=list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties')),
+    )
+    return method_spec
+
+
+def mk_request_func_from_openapi_spec(openapi_spec, method='post', content_type='application/json',
+                                      input_trans=None, output_trans=None):
     base_url = openapi_spec['servers'][0]['url']
     if base_url.endswith('/'):
         base_url = base_url[:-1]  # TODO: need a urljoin instead of this hack!
@@ -374,10 +392,10 @@ def mk_request_func_from_openapi_spec(openapi_spec, method='post', input_trans=N
     path_name, path_spec = next(iter(openapi_spec['paths'].items()))
     method = method or next(iter(path_spec))
     spec = path_spec[method]
-    method_spec = dict(
-        method=method, url_template=url, input_trans=input_trans, output_trans=output_trans,
-        json_arg_names=list(spec['requestBody']['content']['application/json']['schema']['properties']),
-    )
+    method_spec = mk_method_spec_from_openapi_method_spec(spec, method=method, url_template=url,
+                                                          content_type=content_type,
+                                                          input_trans=input_trans,
+                                                          output_trans=output_trans)
 
     return mk_request_function(method_spec, function_kind='function')
 

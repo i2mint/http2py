@@ -13,10 +13,13 @@ class Http2Py:
     def __exit__(self, *args):
         self.close()
 
+    def set_headers(self, headers):
+        self.session.headers.update(headers)
+
     def close(self):
         return self.session.close()
 
 
-import inspect
+# import inspect
 
-inspect.signature()
+# inspect.signature()
