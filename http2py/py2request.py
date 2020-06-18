@@ -103,7 +103,6 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     # defaults
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
-    method_spec['output_trans'] = method_spec.get('output_trans', None) or {}
     method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
 
     request_kwargs = method_spec.get('request_kwargs', {}).copy()
@@ -116,9 +115,12 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     if 'debug' in method_spec:
         debug = method_spec['debug']
 
-    output_trans = method_spec.pop('output_trans', lambda x: x)
+    output_trans = method_spec.pop('output_trans')
+    if not callable(output_trans):
+        output_trans = lambda x: x
 
     wraps_func = method_spec.pop('wraps', None)
+    print(f'method spec: {method_spec}')
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
@@ -153,7 +155,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
                 return _request_kwargs
 
         r = dispatch(method, url, **_request_kwargs)
-        return output_trans(r)
+        if callable(output_trans):
+            return output_trans(r)
+        return r
 
     if function_kind == 'method':
         _request_func = request_func
@@ -174,10 +178,11 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     request_func.func_args = func_args
     request_func.debug = debug
     request_func.method_spec = method_spec
-    funcname = original_spec.get('x-method_name', None)
+    funcname = method_spec['method_name']
     if funcname:
         request_func.__name__ = funcname
 
+    assert callable(output_trans), f'output_trans {output_trans} is not callable, try again'
     return request_func
 
 
@@ -375,9 +380,10 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                             content_type='application/json',
                                             input_trans=None,
                                             output_trans=None):
+    json_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
-        json_arg_names=list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties')),
+        json_arg_names=json_arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
     )
     return method_spec
 

@@ -36,9 +36,9 @@ class HttpClient:
         if security:
             self.init_security(openapi_spec, **auth_kwargs)
         self.session = Session()
-        for pathname, path_spec in openapi_spec['paths']:
+        for pathname, path_spec in openapi_spec['paths'].items():
             url_template = self.base_url + pathname
-            for http_method, openapi_method_spec in path_spec:
+            for http_method, openapi_method_spec in path_spec.items():
                 self.register_method(url_template, http_method, openapi_method_spec)
 
     def init_security(self, openapi_spec, **auth_kwargs):
@@ -73,6 +73,7 @@ class HttpClient:
         setattr(self, funcname, func.__get__(self))
 
     def handle_request(self, method, url, **_request_kwargs):
+        print(f'Making HTTP request: {method}, {url}, {_request_kwargs}')
         if not self.session:
             self.session = Session()
         return self.session.request(method, url, **_request_kwargs)
