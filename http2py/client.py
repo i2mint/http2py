@@ -5,12 +5,29 @@ from http2py.py2request import mk_method_spec_from_openapi_method_spec, mk_reque
 
 
 class HttpClient:
+    """
+    A client class meant as an interface to an HTTP service with one or more routes
+    defined with an OpenAPI spec.
+    """
     auth_type = ''
     login_url = ''
-    refresh_args = {}
+    refresh_url = ''
+    refresh_inputs = {}
     refresh_input_keys = []
 
-    def __init__(self, openapi_spec, *, **auth_kwargs):
+    def __init__(self, openapi_spec, **auth_kwargs):
+        """
+        Initialize the client with an OpenAPI spec and optional authentication inputs
+
+        :param openapi_spec: A server specification in OpenAPI format
+
+        :Keyword Arguments:
+            * *api_key*
+              The API key, if using API key auth
+            * account, email, password, etc. *
+              Input values to be passed to the login url, if using bearer auth
+
+        """
         server_info = openapi_spec['info']
         self.title = server_info['title']
         self.version = server_info['version']
@@ -33,7 +50,6 @@ class HttpClient:
             self.set_header({'Authorization': self.api_key})
         elif auth_type == 'bearerAuth':
             self.auth_type = 'login'
-            _auth_kwargs = dict(**auth_kwargs)
             try:
                 login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login')
             except PathAccessError:
@@ -84,9 +100,9 @@ class HttpClient:
         return self.receive_login(login_result)
 
     def refresh_login(self):
-        if not self.refresh_url or not self.refresh_args:
+        if not self.refresh_url or not self.refresh_inputs:
             return self.login()
-        refresh_result = request('post', self.refresh_url, json=self.refresh_args).json()
+        refresh_result = request('post', self.refresh_url, json=self.refresh_inputs).json()
         return self.receive_login(refresh_result)
 
     def receive_login(self, login_result):
