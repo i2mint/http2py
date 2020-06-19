@@ -11,6 +11,7 @@ class HttpClient:
     """
     auth_type = ''
     login_url = ''
+    openapi_spec = {}
     refresh_url = ''
     refresh_inputs = {}
     refresh_input_keys = []
@@ -28,6 +29,7 @@ class HttpClient:
               Input values to be passed to the login url, if using bearer auth
 
         """
+        self.openapi_spec = openapi_spec
         server_info = openapi_spec['info']
         self.title = server_info['title']
         self.version = server_info['version']
@@ -69,13 +71,12 @@ class HttpClient:
                                                               url_template=url_template,
                                                               content_type=content_type)
         func = mk_request_function(method_spec, dispatch=self.handle_request)
+        func.method_spec = method_spec
         funcname = func.__name__
         setattr(self, funcname, func.__get__(self))
 
     def handle_request(self, method, url, **_request_kwargs):
-        print(f'Making HTTP request: {method}, {url}, {_request_kwargs}')
-        if not self.session:
-            self.session = Session()
+        self.ensure_login()
         return self.session.request(method, url, **_request_kwargs)
 
     def set_header(self, header):

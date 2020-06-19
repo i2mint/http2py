@@ -101,6 +101,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     """
     # defaults
+    print(f'method_spec: {method_spec}')
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
     method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
@@ -120,7 +121,6 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         output_trans = lambda x: x
 
     wraps_func = method_spec.pop('wraps', None)
-    print(f'method spec: {method_spec}')
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
@@ -380,6 +380,7 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                             content_type='application/json',
                                             input_trans=None,
                                             output_trans=None):
+    # TODO: include expected types, not just arg names, for complete function annotations
     json_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
