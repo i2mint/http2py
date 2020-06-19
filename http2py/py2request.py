@@ -389,6 +389,24 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
     return method_spec
 
 
+##### Open api stuff TODO: To move ###########################################
+from inspect import Parameter, Signature
+
+PK = Parameter.POSITIONAL_OR_KEYWORD
+
+
+def _params_from_props(openapi_props):
+    for name, p in openapi_props.items():
+        yield Parameter(name=name, kind=PK,
+                        default=p.get('default', Parameter.empty),
+                        annotation=p.get('type', Parameter.empty))
+
+
+def add_annots_from_openapi_props(func, openapi_props):
+    func.__signature__ = Signature(_params_from_props(openapi_props))
+    return func
+
+
 def mk_request_func_from_openapi_spec(openapi_spec, method='post', content_type='application/json',
                                       input_trans=None, output_trans=None):
     base_url = openapi_spec['servers'][0]['url']
@@ -404,7 +422,8 @@ def mk_request_func_from_openapi_spec(openapi_spec, method='post', content_type=
                                                           input_trans=input_trans,
                                                           output_trans=output_trans)
 
-    return mk_request_function(method_spec, function_kind='function')
+    func = mk_request_function(method_spec, function_kind='function')
+    return add_annots_from_openapi_props(func, spec)
 
 
 mk_request_function.from_openapi_spec = mk_request_func_from_openapi_spec
