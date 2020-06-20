@@ -391,8 +391,13 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
 
 ##### Open api stuff TODO: To move ###########################################
 from inspect import Parameter, Signature
+from typing import Union, Callable, Iterable
+from typing import Mapping as MappingType
 
 PK = Parameter.POSITIONAL_OR_KEYWORD
+
+ParamsType = Iterable[Parameter]
+ParamsAble = Union[ParamsType, MappingType[str, Parameter], Callable]
 
 
 def _params_from_props(openapi_props):
