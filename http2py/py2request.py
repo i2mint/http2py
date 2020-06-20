@@ -101,7 +101,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     """
     # defaults
-    print(f'method_spec: {method_spec}')
+    # print(f'method_spec: {method_spec}')
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
     method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
@@ -412,14 +412,26 @@ def add_annots_from_openapi_props(func, openapi_props):
     return func
 
 
-def mk_request_func_from_openapi_spec(openapi_spec, method='post', content_type='application/json',
+# def get_props_for_func(func, openapi_spec):
+#     path = func_to_path(func)
+#     t = openapi_spec["paths"][func_to_path(func)]
+#     t = t.get('post', t.get('get', None))  # make more robust
+#     assert t is not None
+#     # TODO: glommify
+#     return t['requestBody']['content']['application/json']['schema']['properties']
+
+
+def _get_path_spec(path, openapi_spec):
+    return openapi_spec['paths'][path]
+
+
+def mk_request_func_from_openapi_spec(path, openapi_spec, method='post', content_type='application/json',
                                       input_trans=None, output_trans=None):
     base_url = openapi_spec['servers'][0]['url']
     if base_url.endswith('/'):
         base_url = base_url[:-1]  # TODO: need a urljoin instead of this hack!
-    path_name, path_spec = next(iter(openapi_spec['paths'].items()))
-    url = base_url + path_name
-    path_name, path_spec = next(iter(openapi_spec['paths'].items()))
+    path_spec = _get_path_spec(path, openapi_spec)
+    url = base_url + path  # TODO: url join
     method = method or next(iter(path_spec))
     spec = path_spec[method]
     method_spec = mk_method_spec_from_openapi_method_spec(spec, method=method, url_template=url,
@@ -428,7 +440,19 @@ def mk_request_func_from_openapi_spec(openapi_spec, method='post', content_type=
                                                           output_trans=output_trans)
 
     func = mk_request_function(method_spec, function_kind='function')
-    return add_annots_from_openapi_props(func, spec)
+    # TODO: Glom this
+    openapi_props = spec['requestBody']['content']["application/json"]["schema"]["properties"]
+    try:
+        _, func_name = path.split('/')  # fragile way of getting the name
+    except Exception:
+        func_name = 'request_func'
+    func = add_annots_from_openapi_props(func, openapi_props)
+    func.path = path
+    func.method = method
+    func.content_type = content_type
+    func.__name__ = func_name
+    func.__qualname__ = func_name
+    return func
 
 
 mk_request_function.from_openapi_spec = mk_request_func_from_openapi_spec
