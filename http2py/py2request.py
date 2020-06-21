@@ -116,7 +116,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     if 'debug' in method_spec:
         debug = method_spec['debug']
 
-    output_trans = method_spec.pop('output_trans')
+    output_trans = method_spec.pop('output_trans', None)
     if not callable(output_trans):
         output_trans = lambda x: x
 
@@ -178,7 +178,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     request_func.func_args = func_args
     request_func.debug = debug
     request_func.method_spec = method_spec
-    funcname = method_spec['method_name']
+    funcname = method_spec.get('method_name', None)
     if funcname:
         request_func.__name__ = funcname
 
