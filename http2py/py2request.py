@@ -143,7 +143,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         if 'url_template' in method_spec:
             url = method_spec['url_template'].format(**kwargs)
         elif 'url' in method_spec:
-            url = method_spec.pop('url', None)
+            url = method_spec['url']
 
         if json_data:
             _request_kwargs['json'] = json_data
