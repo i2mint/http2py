@@ -18,6 +18,7 @@ Are you enjoying yourself?
 There must be a better way...
 """
 from functools import wraps
+from inspect import signature
 from glom import glom
 from requests import request
 import string
@@ -446,7 +447,12 @@ def mk_request_func_from_openapi_spec(path, openapi_spec, method='post', content
         _, func_name = path.split('/')  # fragile way of getting the name
     except Exception:
         func_name = 'request_func'
-    func = add_annots_from_openapi_props(func, openapi_props)
+
+    if 'x-func' in spec:
+        original_func = spec['x-func']
+        func.__signature__ = signature(original_func)
+    else:
+        func = add_annots_from_openapi_props(func, openapi_props)
     func.path = path
     func.method = method
     func.content_type = content_type
