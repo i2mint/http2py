@@ -24,6 +24,7 @@ from requests import request
 import string
 
 from py2misc.util import I2mintModuleNotFoundErrorNiceMessage
+from http2py.default_configs import default_output_trans
 
 with I2mintModuleNotFoundErrorNiceMessage():
     from py2mint.util import inject_method, imdict
@@ -117,9 +118,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     if 'debug' in method_spec:
         debug = method_spec['debug']
 
-    output_trans = method_spec.pop('output_trans', None)
-    if not callable(output_trans):
-        output_trans = lambda x: x
+    output_trans = method_spec.pop('output_trans', default_output_trans)
+    if output_trans is None:
+        output_trans = default_output_trans
 
     wraps_func = method_spec.pop('wraps', None)
 
@@ -441,8 +442,7 @@ def mk_request_func_from_openapi_spec(path, openapi_spec, method='post', content
                                                           output_trans=output_trans)
 
     func = mk_request_function(method_spec, function_kind='function')
-    # TODO: Glom this
-    openapi_props = spec['requestBody']['content']["application/json"]["schema"]["properties"]
+    openapi_props = glom(spec, f'requestBody.content.{content_type}.schema.properties')
     try:
         _, func_name = path.split('/')  # fragile way of getting the name
     except Exception:
