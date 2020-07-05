@@ -18,11 +18,13 @@ Are you enjoying yourself?
 There must be a better way...
 """
 from functools import wraps
+from inspect import signature
 from glom import glom
 from requests import request
 import string
 
 from py2misc.util import I2mintModuleNotFoundErrorNiceMessage
+from http2py.default_configs import default_output_trans
 
 with I2mintModuleNotFoundErrorNiceMessage():
     from py2mint.util import inject_method, imdict
@@ -116,9 +118,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     if 'debug' in method_spec:
         debug = method_spec['debug']
 
-    output_trans = method_spec.pop('output_trans', None)
-    if not callable(output_trans):
-        output_trans = lambda x: x
+    output_trans = method_spec.pop('output_trans', default_output_trans)
+    if output_trans is None:
+        output_trans = default_output_trans
 
     wraps_func = method_spec.pop('wraps', None)
 
@@ -143,7 +145,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         if 'url_template' in method_spec:
             url = method_spec['url_template'].format(**kwargs)
         elif 'url' in method_spec:
-            url = method_spec.pop('url', None)
+            url = method_spec['url']
 
         if json_data:
             _request_kwargs['json'] = json_data
@@ -440,13 +442,17 @@ def mk_request_func_from_openapi_spec(path, openapi_spec, method='post', content
                                                           output_trans=output_trans)
 
     func = mk_request_function(method_spec, function_kind='function')
-    # TODO: Glom this
-    openapi_props = spec['requestBody']['content']["application/json"]["schema"]["properties"]
+    openapi_props = glom(spec, f'requestBody.content.{content_type}.schema.properties')
     try:
         _, func_name = path.split('/')  # fragile way of getting the name
     except Exception:
         func_name = 'request_func'
-    func = add_annots_from_openapi_props(func, openapi_props)
+
+    if 'x-func' in spec:
+        original_func = spec['x-func']
+        func.__signature__ = signature(original_func)
+    else:
+        func = add_annots_from_openapi_props(func, openapi_props)
     func.path = path
     func.method = method
     func.content_type = content_type
