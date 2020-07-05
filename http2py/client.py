@@ -72,12 +72,13 @@ class HttpClient:
                                                               content_type=content_type)
         func = mk_request_function(method_spec, dispatch=self.handle_request)
         func.method_spec = method_spec
+        func.content_type = content_type
         funcname = func.__name__
         setattr(self, funcname, func.__get__(self))
 
     def handle_request(self, method, url, **_request_kwargs):
         self.ensure_login()
-        return self.session.request(method, url, **_request_kwargs)
+        return self.session.request(method, url, **_request_kwargs).json()
 
     def set_header(self, header):
         if not self.session:
