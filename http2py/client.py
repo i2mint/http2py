@@ -56,7 +56,7 @@ class HttpClient:
                 login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login')
             except PathAccessError:
                 login_details = {}
-            self.login_url = login_details.pop('login_url', None)
+            self.login_url = login_details.get('login_url', None)
             login_inputs = login_details.get('login_inputs', [])
             self.login_args = {}
             for key in login_inputs:
@@ -78,7 +78,7 @@ class HttpClient:
 
     def handle_request(self, method, url, **_request_kwargs):
         self.ensure_login()
-        return self.session.request(method, url, **_request_kwargs).json()
+        return self.session.request(method, url, **_request_kwargs)
 
     def set_header(self, header):
         if not self.session:

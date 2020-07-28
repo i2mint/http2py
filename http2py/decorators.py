@@ -10,4 +10,3 @@ def handle_json_resp(func):
 
     output_trans.content_type = 'json'
     return output_trans
-        
