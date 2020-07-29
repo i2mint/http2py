@@ -56,7 +56,7 @@ class HttpClient:
                 login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login')
             except PathAccessError:
                 login_details = {}
-            self.login_url = login_details.pop('login_url', None)
+            self.login_url = login_details.get('login_url', None)
             login_inputs = login_details.get('login_inputs', [])
             self.login_args = {}
             for key in login_inputs:
