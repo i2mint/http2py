@@ -78,7 +78,7 @@ class HttpClient:
 
     def handle_request(self, method, url, **_request_kwargs):
         self.ensure_login()
-        return self.session.request(method, url, **_request_kwargs).json()
+        return self.session.request(method, url, **_request_kwargs)
 
     def set_header(self, header):
         if not self.session:
@@ -116,4 +116,3 @@ class HttpClient:
                 self.set_header(auth_header)
             elif key in self.refresh_input_keys:
                 self.refresh_inputs[key] = value
-
