@@ -34,7 +34,7 @@ class HttpClient:
         self.title = server_info['title']
         self.version = server_info['version']
         self.base_url = glom(openapi_spec, 'servers.0.url')
-        security = openapi_spec['security']
+        security = openapi_spec.get('security', None)
         if security:
             self.init_security(openapi_spec, **auth_kwargs)
         self.session = Session()

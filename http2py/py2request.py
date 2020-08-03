@@ -126,18 +126,13 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
-
+        
         kwargs = dict(kwargs, **{argname: argval for argname, argval in zip(func_args, args)})
 
         # convert argument types TODO: Not efficient. Might could be revised.
         for arg_name, converter in method_spec.get('input_trans', {}).items():
             if arg_name in kwargs:
                 kwargs[arg_name] = converter(kwargs[arg_name])
-
-        json_data = {}
-        for arg_name in method_spec.get('json_arg_names', []):
-            if arg_name in kwargs:
-                json_data[arg_name] = kwargs.pop(arg_name)
 
         # making the request_kwargs ####################################################################################
         _request_kwargs = dict(**request_kwargs)  # to make a copy
@@ -147,8 +142,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         elif 'url' in method_spec:
             url = method_spec['url']
 
-        if json_data:
-            _request_kwargs['json'] = json_data
+        _request_kwargs['json'] = kwargs
 
         if debug is not None:
             if debug == 'print_request_kwargs':
