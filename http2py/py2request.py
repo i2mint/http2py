@@ -23,7 +23,7 @@ from glom import glom
 from requests import request
 import string
 
-from py2misc.util import I2mintModuleNotFoundErrorNiceMessage
+from http2py.util import I2mintModuleNotFoundErrorNiceMessage
 from http2py.default_configs import default_output_trans
 
 with I2mintModuleNotFoundErrorNiceMessage():
@@ -250,7 +250,7 @@ class Py2Request(object):
         ... }
         >>> pr = Py2Request(method_specs=method_specs)
         >>> html = pr.search_google('convention over configuration')
-        >>> html[:14]
+        >>> html[:14].lower()
         '<!doctype html'
         >>> # And I'll let the reader try the other requests, whose results are not stable enough to test like this
 
