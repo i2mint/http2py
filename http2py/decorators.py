@@ -5,16 +5,15 @@ def handle_error(resp):
     if resp.status_code == 400:
         if resp.reason == 'AuthorizationError':
             raise AuthorizationError(resp.text)
-        elif resp.reason == 'InputError':
+        if resp.reason == 'InputError':
             raise InputError(resp.text)
-        elif resp.reason == 'DuplicateRecordError':
+        if resp.reason == 'DuplicateRecordError':
             raise DuplicateRecordError(resp.text)
     if resp.status_code == 403:
         raise ForbiddenError(resp.text)
-    elif resp.status_code == 404:
+    if resp.status_code == 404:
         raise NotFoundError(resp.text)
-    else:
-        raise RuntimeError(resp.text)
+    raise RuntimeError(resp.text)
 
 
 def handle_json_resp(func):
