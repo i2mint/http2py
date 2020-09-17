@@ -177,6 +177,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     funcname = method_spec.get('method_name', None)
     if funcname:
         request_func.__name__ = funcname
+    docstring = method_spec.get('docstring', None)
+    if docstring:
+        request_func.__doc__ = docstring
 
     assert callable(output_trans), f'output_trans {output_trans} is not callable, try again'
     return request_func
@@ -381,6 +384,7 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
         json_arg_names=json_arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
+        docstring=openapi_method_spec.get('x-docstring', '')
     )
     return method_spec
 
