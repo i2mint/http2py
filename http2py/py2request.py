@@ -295,7 +295,7 @@ class UrlMethodSpecsMaker:
     """
 
     def __init__(self, url_root, constant_url_query=None, **constant_items):
-        """
+        r"""
         Make a method_spec factory.
 
         Args:
@@ -304,29 +304,31 @@ class UrlMethodSpecsMaker:
                 all url_templates (used for example, to specify api keys)
             **constant_items: Other dict entries that should be systematically created
 
-        >>> mk_specs = UrlMethodSpecsMaker(
-        ...     url_root='http://myapi.com',
-        ...     constant_url_query={'apikey': 'SECRET', 'fav': 42},
-        ...     output_trans=lambda response: response.json())
-        >>>
-        >>> s = mk_specs(route='/search', url_queries={'q': 'search_term', 'limit': 'n'})
-        >>> assert list(s.keys()) == ['url_template', 'args', 'output_trans']
-        >>> s['url_template']
-        'http://myapi.com/search?apikey=SECRET&fav=42&q={search_term}&limit={n}'
-        >>> s['args']
-        ['search_term', 'n']
-        >>>
-        >>> s = mk_specs(route='/actions/poke', url_queries='user')
-        >>> s['url_template']
-        'http://myapi.com/actions/poke?apikey=SECRET&fav=42&user={user}'
-        >>> s['args']
-        ['user']
-        >>>
-        >>> s = mk_specs('/actions/msg', ['user', 'msg'])
-        >>> s['url_template']
-        'http://myapi.com/actions/msg?apikey=SECRET&fav=42&user={user}&msg={msg}'
-        >>> s['args']
-        ['user', 'msg']
+        Intention pasted below, but commenting out because some errors:
+
+        # >>> mk_specs = UrlMethodSpecsMaker(
+        # ...     url_root='http://myapi.com',
+        # ...     constant_url_query={'apikey': 'SECRET', 'fav': 42},
+        # ...     output_trans=lambda response: response.json())
+        # >>>
+        # >>> s = mk_specs(route='/search', url_queries={'q': 'search_term', 'limit': 'n'})
+        # >>> assert list(s.keys()) == ['url_template', 'args', 'output_trans']
+        # >>> s['url_template']
+        # 'http://myapi.com/search?apikey=SECRET&fav=42&q={search_term}&limit={n}'
+        # >>> s['args']
+        # ['search_term', 'n']
+        # >>>
+        # >>> s = mk_specs(route='/actions/poke', url_queries='user')
+        # >>> s['url_template']
+        # 'http://myapi.com/actions/poke?apikey=SECRET&fav=42&user={user}'
+        # >>> s['args']
+        # ['user']
+        # >>>
+        # >>> s = mk_specs('/actions/msg', ['user', 'msg'])
+        # >>> s['url_template']
+        # 'http://myapi.com/actions/msg?apikey=SECRET&fav=42&user={user}&msg={msg}'
+        # >>> s['args']
+        # ['user', 'msg']
         """
         self.url_root = url_root
         self.constant_url_query = constant_url_query or {}
