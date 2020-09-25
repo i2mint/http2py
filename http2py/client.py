@@ -2,6 +2,7 @@ from glom import glom, PathAccessError
 from requests import request, Session
 
 from http2py.py2request import mk_method_spec_from_openapi_method_spec, mk_request_function
+from http2py.global_state import get_global_state
 
 
 class HttpClient:
@@ -13,14 +14,14 @@ class HttpClient:
     login_url = ''
     openapi_spec = {}
     refresh_url = ''
-    refresh_inputs = {}
     refresh_input_keys = []
 
-    def __init__(self, openapi_spec, **auth_kwargs):
+    def __init__(self, openapi_spec, session_state=None, **auth_kwargs):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
         :param openapi_spec: A server specification in OpenAPI format
+        :param session: A session for HTTP requests
 
         :Keyword Arguments:
             * *api_key*
@@ -37,7 +38,18 @@ class HttpClient:
         security = openapi_spec.get('security', None)
         if security:
             self.init_security(openapi_spec, **auth_kwargs)
-        self.session = Session()
+        if not session_state:
+            session_state = get_global_state(
+                'session_state',
+                {'session': Session(), 'refresh_inputs': {}}
+            )
+        self.session = session_state.get('session')
+        if not self.session:
+            raise ValueError('No session provided when instantiating HttpClient')
+        self.refresh_inputs = session_state.get('refresh_inputs')
+        if self.refresh_inputs is None:
+            raise ValueError('No refresh inputs provided when instantiating HttpClient')
+            
         for pathname, path_spec in openapi_spec['paths'].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
@@ -81,18 +93,17 @@ class HttpClient:
         return self.session.request(method, url, **_request_kwargs)
 
     def set_header(self, header):
-        if not self.session:
-            self.session = Session()
         self.session.headers.update(header)
 
     def ensure_login(self):
         if self.auth_type != 'login':
             return True
-        if not self.session or not self.session.headers.get('Authorization', None):
+        if not self.session.headers.get('Authorization', None):
             return self.login()
         return True
 
     def login(self):
+        print('login')
         if not self.login_url:
             raise ValueError('Login was called without a login url. '
                              'Check your initialization arguments for HttpClient.')
