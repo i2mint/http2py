@@ -15,6 +15,7 @@ class HttpClient:
     refresh_url = ''
     refresh_inputs = {}
     refresh_input_keys = []
+    session = None
 
     def __init__(self, openapi_spec, **auth_kwargs):
         """
@@ -35,9 +36,9 @@ class HttpClient:
         self.version = server_info['version']
         self.base_url = glom(openapi_spec, 'servers.0.url')
         security = openapi_spec.get('security', None)
+        self.session = Session()
         if security:
             self.init_security(openapi_spec, **auth_kwargs)
-        self.session = Session()
         for pathname, path_spec in openapi_spec['paths'].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
@@ -84,6 +85,7 @@ class HttpClient:
         if not self.session:
             self.session = Session()
         self.session.headers.update(header)
+
 
     def ensure_login(self):
         if self.auth_type != 'login':
