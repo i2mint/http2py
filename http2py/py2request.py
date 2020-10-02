@@ -386,7 +386,7 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
         json_arg_names=json_arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
-        docstring=openapi_method_spec.get('x-docstring', '')
+        docstring=openapi_method_spec.get('description', '')
     )
     return method_spec
 
