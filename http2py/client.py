@@ -78,7 +78,9 @@ class HttpClient:
             self.login_response_keys = login_details.get('outputs', [])
 
     def register_method(self, url_template, http_method, openapi_method_spec):
-        content_type = next(iter(glom(openapi_method_spec, 'requestBody.content').keys()))
+        content_type = None
+        if 'requestBody' in openapi_method_spec:
+            content_type = next(iter(glom(openapi_method_spec, 'requestBody.content').keys()))
         method_spec = mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                                               method=http_method,
                                                               url_template=url_template,

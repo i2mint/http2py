@@ -22,8 +22,9 @@ from inspect import signature
 from glom import glom
 from requests import request
 import string
+import io
 
-from http2py.util import I2mintModuleNotFoundErrorNiceMessage
+from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
 from http2py.default_configs import default_output_trans
 
 with I2mintModuleNotFoundErrorNiceMessage():
@@ -126,7 +127,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
-        
+
         kwargs = dict(kwargs, **{argname: argval for argname, argval in zip(func_args, args)})
 
         # convert argument types TODO: Not efficient. Might could be revised.
@@ -142,7 +143,14 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         elif 'url' in method_spec:
             url = method_spec['url']
 
-        _request_kwargs['json'] = kwargs
+        json = {k: v for k, v in kwargs.items() if is_jsonable(v)}
+        files = {k: v for k, v in kwargs.items() if type(v) == io.BufferedReader}
+        remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json and k not in files}
+        if remaining_kwargs:
+            raise ValueError(f'These arguments are neither serializable nor file objects: {remaining_kwargs}')
+
+        _request_kwargs['json'] = json
+        _request_kwargs['files'] = files
 
         if debug is not None:
             if debug == 'print_request_kwargs':
@@ -382,10 +390,15 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                             input_trans=None,
                                             output_trans=None):
     # TODO: include expected types, not just arg names, for complete function annotations
-    json_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
+    args = []
+    json_arg_names = []
+    if 'parameters' in openapi_method_spec:
+        args = list(map(lambda x: x['name'], openapi_method_spec.get('parameters', [])))
+    if 'requestBody' in openapi_method_spec:
+        json_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
-        json_arg_names=json_arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
+        args=args, json_arg_names=json_arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
         docstring=openapi_method_spec.get('description', '')
     )
     return method_spec

@@ -1,3 +1,6 @@
+import json
+
+
 def add_defaults(d, dflts):
     """Adds defaults to every (mapping) value of every item of d"""
     dflt_keys = set(dflts)
@@ -34,3 +37,11 @@ It seems you don't have requred `{exc_val.name}` package. Not sure if this is th
     git clone https://github.com/i2mint/{exc_val.name}
 in a place that your python path (i.e. PYTHONPATH environment variable).  
             """)
+
+
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except (TypeError, OverflowError):
+        return False
