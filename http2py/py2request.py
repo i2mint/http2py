@@ -113,7 +113,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     method = method_spec.pop('method',
                              request_kwargs.pop('method',
                                                 DFLT_REQUEST_METHOD))
-    func_args = _ensure_list(method_spec.get('args', [])) + _ensure_list(method_spec.get('json_arg_names', []))
+    args = _ensure_list(method_spec.get('args', []))
+    arg_names = _ensure_list(method_spec.get('arg_names', []))
+    func_args = args + arg_names
 
     debug = method_spec.pop('debug', None)
     if 'debug' in method_spec:
@@ -127,6 +129,15 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
+
+        def get_req_param_key():
+            content_type = method_spec.get('content_type', 'text/plain')
+            if content_type == 'text/plain':
+                return 'data'
+            if content_type == 'multipart/form-data':
+                return 'files'
+            if content_type == 'application/octet-stream':
+                return 'stream'
 
         kwargs = dict(kwargs, **{argname: argval for argname, argval in zip(func_args, args)})
 
@@ -144,13 +155,12 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
             url = method_spec['url']
 
         json = {k: v for k, v in kwargs.items() if is_jsonable(v)}
-        files = {k: v for k, v in kwargs.items() if type(v) == io.BufferedReader}
-        remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json and k not in files}
-        if remaining_kwargs:
-            raise ValueError(f'These arguments are neither serializable nor file objects: {remaining_kwargs}')
-
         _request_kwargs['json'] = json
-        _request_kwargs['files'] = files
+        remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json}
+        if remaining_kwargs:
+            req_param_key = get_req_param_key()
+            _request_kwargs[req_param_key] = {k: v for k, v in remaining_kwargs.items() if k in arg_names}
+        print(_request_kwargs)
 
         if debug is not None:
             if debug == 'print_request_kwargs':
@@ -391,15 +401,15 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                             output_trans=None):
     # TODO: include expected types, not just arg names, for complete function annotations
     args = []
-    json_arg_names = []
+    arg_names = []
     if 'parameters' in openapi_method_spec:
         args = list(map(lambda x: x['name'], openapi_method_spec.get('parameters', [])))
     if 'requestBody' in openapi_method_spec:
-        json_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
+        arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
-        args=args, json_arg_names=json_arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
-        docstring=openapi_method_spec.get('description', '')
+        args=args, arg_names=arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
+        docstring=openapi_method_spec.get('description', ''), content_type=content_type
     )
     return method_spec
 
