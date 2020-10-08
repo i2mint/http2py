@@ -107,7 +107,6 @@ class HttpClient:
         return True
 
     def login(self):
-        print('login')
         if not self.login_url:
             raise ValueError('Login was called without a login url. '
                              'Check your initialization arguments for HttpClient.')

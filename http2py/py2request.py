@@ -23,9 +23,10 @@ from glom import glom
 from requests import request
 import string
 import io
+import re
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
-from http2py.default_configs import default_output_trans
+from http2py.default_configs import default_json_output_trans, default_text_output_trans, default_content_output_trans
 
 with I2mintModuleNotFoundErrorNiceMessage():
     from i2.util import inject_method, imdict
@@ -103,8 +104,6 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         That argument is ignored.
 
     """
-    # defaults
-    # print(f'method_spec: {method_spec}')
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
     method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
@@ -113,17 +112,24 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     method = method_spec.pop('method',
                              request_kwargs.pop('method',
                                                 DFLT_REQUEST_METHOD))
-    args = _ensure_list(method_spec.get('args', []))
-    arg_names = _ensure_list(method_spec.get('arg_names', []))
-    func_args = args + arg_names
+    path_arg_names = _ensure_list(method_spec.get('path_arg_names', []))
+    query_arg_names = _ensure_list(method_spec.get('query_arg_names', []))
+    body_arg_names = _ensure_list(method_spec.get('body_arg_names', []))
+    func_args = path_arg_names + query_arg_names + body_arg_names
 
     debug = method_spec.pop('debug', None)
     if 'debug' in method_spec:
         debug = method_spec['debug']
 
-    output_trans = method_spec.pop('output_trans', default_output_trans)
+    output_trans = method_spec.pop('output_trans', None)
     if output_trans is None:
-        output_trans = default_output_trans
+        response_type = method_spec.get('response_type', 'text/plain')
+        if response_type == 'text/plain':
+            output_trans = default_text_output_trans
+        if response_type == 'application/json':
+            output_trans = default_json_output_trans
+        else:
+            output_trans = default_content_output_trans
 
     wraps_func = method_spec.pop('wraps', None)
 
@@ -150,7 +156,13 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         _request_kwargs = dict(**request_kwargs)  # to make a copy
         url = None
         if 'url_template' in method_spec:
-            url = method_spec['url_template'].format(**kwargs)
+            url_template = method_spec['url_template']
+            # Check if the url template already have parameters, add them otherwise
+            if query_arg_names and not re.search("^.*\?((.*=.*)(&?))+$", url_template):
+                url_arg_parts = [f'{x}={{{x}}}' for x in query_arg_names if x in kwargs]
+                url_args = '&'.join(url_arg_parts)
+                url_template += f'?{url_args}'
+            url = url_template.format(**kwargs)
         elif 'url' in method_spec:
             url = method_spec['url']
 
@@ -159,8 +171,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json}
         if remaining_kwargs:
             req_param_key = get_req_param_key()
-            _request_kwargs[req_param_key] = {k: v for k, v in remaining_kwargs.items() if k in arg_names}
-        print(_request_kwargs)
+            _request_kwargs[req_param_key] = {k: v for k, v in remaining_kwargs.items() if k in body_arg_names}
 
         if debug is not None:
             if debug == 'print_request_kwargs':
@@ -252,7 +263,7 @@ class Py2Request(object):
         ...     },
         ...     'search_google': {
         ...         'url_template': 'https://www.google.com/search?q={search_term}',
-        ...         'args': ['search_term'],  # only needed if you want to use unnamed arguments in your method
+        ...         'query_arg_names': ['search_term'],  # only needed if you want to use unnamed arguments in your method
         ...         'output_trans': lambda r: r.text,
         ...     },
         ...     'search_google_and_count_tokens': {
@@ -400,16 +411,21 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                             input_trans=None,
                                             output_trans=None):
     # TODO: include expected types, not just arg names, for complete function annotations
-    args = []
-    arg_names = []
+    path_arg_names = []
+    query_arg_names = []
+    body_arg_names = []
     if 'parameters' in openapi_method_spec:
-        args = list(map(lambda x: x['name'], openapi_method_spec.get('parameters', [])))
+        params = openapi_method_spec['parameters']
+        path_arg_names = [x['name'] for x in params if x.get('in', 'path') == 'path']
+        query_arg_names = [x['name'] for x in params if x.get('in', 'path') == 'query']
     if 'requestBody' in openapi_method_spec:
-        arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
+        body_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
-        args=args, arg_names=arg_names, method_name=openapi_method_spec.get('x-method_name', ''),
-        docstring=openapi_method_spec.get('description', ''), content_type=content_type
+        path_arg_names=path_arg_names, query_arg_names=query_arg_names, body_arg_names=body_arg_names, 
+        method_name=openapi_method_spec.get('x-method_name', ''),
+        docstring=openapi_method_spec.get('description', ''), content_type=content_type, 
+        response_type=next(iter(glom(openapi_method_spec, f'responses.200.content'))),
     )
     return method_spec
 

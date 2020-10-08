@@ -16,6 +16,17 @@ def handle_error(resp):
     raise RuntimeError(resp.text)
 
 
+def handle_text_resp(func):
+    def output_trans(resp):
+        if resp.status_code == 200:
+            return resp.text
+        else:
+            handle_error(resp)
+
+    output_trans.content_type = 'text'
+    return output_trans
+
+
 def handle_json_resp(func):
     def output_trans(resp):
         if resp.status_code == 200:
@@ -24,4 +35,15 @@ def handle_json_resp(func):
             handle_error(resp)
 
     output_trans.content_type = 'json'
+    return output_trans
+
+
+def handle_content_resp(func):
+    def output_trans(resp):
+        if resp.status_code == 200:
+            return resp.content
+        else:
+            handle_error(resp)
+
+    output_trans.content_type = 'content'
     return output_trans
