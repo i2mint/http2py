@@ -18,7 +18,12 @@ setup(
     author='Thor Whalen',
     license='Apache',
     packages=find_packages(),
-    install_requires=['requests'],
+    dependency_links=['git+https://github.com/i2mint/i2.git#egg=i2'],
+    install_requires=[
+        'requests',
+        'glom',
+        'i2'
+    ],
     include_package_data=True,
     zip_safe=False,
     # download_url='https://github.com/i2mint/{name}/archive/v{version}.zip',
