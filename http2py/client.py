@@ -72,8 +72,9 @@ class HttpClient:
             self.login_url = login_details.get('login_url', None)
             login_inputs = login_details.get('login_inputs', [])
             self.login_args = {}
-            for key in login_inputs:
-                self.login_args[key] = auth_kwargs.get(key, None)
+            for key in auth_kwargs:
+                if key in login_inputs:
+                    self.login_args[key] = auth_kwargs[key]
             self.refresh_input_keys = login_details.get('refresh_inputs', [])
             self.login_response_keys = login_details.get('outputs', [])
 
