@@ -125,7 +125,7 @@ class HttpClient:
         return self.receive_login(refresh_result)
 
     def receive_login(self, login_result):
-        error = login_result.get(error, None)
+        error = login_result.get('error', None)
         if error:
             raise AuthorizationError(error)
         for key in self.login_response_keys:
