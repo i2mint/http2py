@@ -1,5 +1,6 @@
 from glom import glom, PathAccessError
 from requests import request, Session
+from i2.errors import AuthorizationError
 
 from http2py.py2request import mk_method_spec_from_openapi_method_spec, mk_request_function
 from http2py.global_state import get_global_state
@@ -124,6 +125,9 @@ class HttpClient:
         return self.receive_login(refresh_result)
 
     def receive_login(self, login_result):
+        error = login_result.get(error, None)
+        if error:
+            raise AuthorizationError(error)
         for key in self.login_response_keys:
             value = login_result.get(key, None)
             if key == 'jwt':
