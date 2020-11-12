@@ -1,7 +1,19 @@
 """
-Won't show the details here, but if you are used to it's not that hard, you just need to find the definition of the API, read it, figure out what part of the request you need in the URL and what you need to put in the "payload", figure out how those _inputs_ of the request need to be formated, construct the URL and the payload according to your newly acquired knowledge of this specific API, make a web request (say with `urllib.request` or `requests`), extract the information you need from the response object (often in `.contents` or `.json()`), and often process the data further to get it in the format you can use it directly (say a list, a dict, a dataframe, a numpy array, etc.).
+Won't show the details here, but if you are used to it's not that hard,
+you just need to find the definition of the API, read it, figure out what part
+of the request you need in the URL and what you need to put in the "payload",
+figure out how those _inputs_ of the request need to be formated,
+construct the URL and the payload according to your newly acquired knowledge of this specific API,
+make a web request (say with `urllib.request` or `requests`),
+extract the information you need from the response object (often in `.contents` or `.json()`),
+and often process the data further to get it in the format you can use it directly
+(say a list, a dict, a dataframe, a numpy array, etc.).
 
-And if you're experienced, and have felt the pain of needing to reuse or adapt your code, you'll clean things up as soon as you figure this puzzle out. You'll divide your code into separate concerns, encapsulate these concerns in functions and classes, and offer a simple, intuitive, python-like interface that reflects the simplicity of what you're actually doing: Just getting some data. Something like:
+And if you're experienced, and have felt the pain of needing to reuse or adapt your code,
+you'll clean things up as soon as you figure this puzzle out.
+You'll divide your code into separate concerns, encapsulate these concerns in functions and classes,
+and offer a simple, intuitive, python-like interface that reflects the simplicity
+of what you're actually doing: Just getting some data. Something like:
 
 ```
 nice_python_obj_I_can_use_directly = get_that_darn_data(query, using, my, words, values, and, defaults='here')
@@ -18,25 +30,29 @@ Are you enjoying yourself?
 There must be a better way...
 """
 from functools import wraps
-from inspect import signature
+from inspect import signature, Parameter
 from glom import glom
 from requests import request
 import string
-import io
+# import io
 import re
+from typing import Any, Union
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
 from http2py.default_configs import default_json_output_trans, default_text_output_trans, default_content_output_trans
 
 with I2mintModuleNotFoundErrorNiceMessage():
     from i2.util import inject_method, imdict
-    from i2.signatures import set_signature_of_func
+    from i2.signatures import set_signature_of_func, KO
 
 DFLT_PORT = 5000
 DFLT_BASE_URL = 'http://localhost:{port}'.format(port=DFLT_PORT)
 DFLT_REQUEST_METHOD = 'GET'
 DFLT_REQUEST_KWARGS = imdict({'method': DFLT_REQUEST_METHOD, 'url': ''})
 
+pytype_for_oatype = {
+    'string': str, 'number': Union[float, int], 'integer': int, 'array': list, 'object': dict, 'boolean': bool, '{}': Any
+}
 
 def identity_func(x):
     return x
@@ -63,6 +79,25 @@ def _ensure_list(x):
     if isinstance(x, str):
         return [x]
     return x
+
+
+def mk_param_spec_from_arg_schema(arg, required=False):
+    spec_dict = {
+        'name': arg['name'],
+    }
+    if 'default' in arg:
+        spec_dict['default'] = (arg['default'])
+    elif not arg.get('required', required):
+        spec_dict['default'] = None
+    else:
+        spec_dict['default'] =Parameter.empty
+    if 'type' in arg:
+        spec_dict['annotation'] = arg['type']
+    if 'kind' in arg:
+        spec_dict['kind'] = arg['kind']
+    else:
+        spec_dict['kind'] = KO
+    return spec_dict
 
 
 def mk_request_function(method_spec, *, function_kind='method', dispatch=request):
@@ -115,6 +150,8 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     path_arg_names = _ensure_list(method_spec.get('path_arg_names', []))
     query_arg_names = _ensure_list(method_spec.get('query_arg_names', []))
     body_arg_names = _ensure_list(method_spec.get('body_arg_names', []))
+    arg_specs = method_spec.get('arg_specs', [])
+    formatted_arg_specs = [mk_param_spec_from_arg_schema(arg) for arg in arg_specs]
     func_args = path_arg_names + query_arg_names + body_arg_names
 
     debug = method_spec.pop('debug', None)
@@ -193,11 +230,11 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     if wraps_func:
         return wraps(wraps_func)(request_func)
     else:
-        if func_args:
+        if formatted_arg_specs:
             if function_kind == 'method':
-                set_signature_of_func(request_func, ['self'] + func_args)
+                set_signature_of_func(request_func, ['self'] + formatted_arg_specs)
             elif function_kind == 'function':
-                set_signature_of_func(request_func, func_args)
+                set_signature_of_func(request_func, formatted_arg_specs)
 
     request_func.original_spec = original_spec
     request_func.func_args = func_args
@@ -410,22 +447,48 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                                             content_type='application/json',
                                             input_trans=None,
                                             output_trans=None):
-    # TODO: include expected types, not just arg names, for complete function annotations
     path_arg_names = []
     query_arg_names = []
     body_arg_names = []
+    arg_specs = []
     if 'parameters' in openapi_method_spec:
         params = openapi_method_spec['parameters']
-        path_arg_names = [x['name'] for x in params if x.get('in', 'path') == 'path']
-        query_arg_names = [x['name'] for x in params if x.get('in', 'path') == 'query']
+        for param in params:
+            argname = param['name']
+            argtype = param['type']
+            arg_spec = {'name': argname, 'type': pytype_for_oatype[argtype]}
+            if param.get('in', 'path') == 'path':
+                arg_spec['required'] = True
+                path_arg_names.append(argname)
+            else:
+                if param.get('required'):
+                    arg_spec['required']   = True
+                elif 'default' in param:
+                    arg_spec['default'] = param['default']
+                query_arg_names.append(argname)
+            arg_specs.append(arg_spec)
     if 'requestBody' in openapi_method_spec:
-        body_arg_names = list(glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties'))
+        body_properties = glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties', default={})
+        required_properties = glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.required', default=[])
+        for argname, details in body_properties.items():
+            body_arg_names.append(argname)
+            argtype = details['type']
+            # TODO: fully support typed dict and typed iterable types
+            arg_spec = {'name': argname, 'type': pytype_for_oatype[argtype]}
+            if 'default' in details:
+                arg_spec['default'] = details['default']
+            if argname in required_properties:
+                arg_spec['required'] = True
+            arg_specs.append(arg_spec)
+
+
     method_spec = dict(
         method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
         path_arg_names=path_arg_names, query_arg_names=query_arg_names, body_arg_names=body_arg_names, 
         method_name=openapi_method_spec.get('x-method_name', ''),
         docstring=openapi_method_spec.get('description', ''), content_type=content_type, 
         response_type=next(iter(glom(openapi_method_spec, f'responses.200.content'))),
+        arg_specs=arg_specs
     )
     return method_spec
 

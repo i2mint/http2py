@@ -7,7 +7,7 @@ def readme():
 
 
 name = 'http2py'
-version = '0.0.5'
+version = '0.1.0'
 setup(
     name=f'{name}',
     version=f'{version}',

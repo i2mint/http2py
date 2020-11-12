@@ -1,4 +1,4 @@
-from glom import glom, PathAccessError
+from glom import glom
 from requests import request, Session
 from i2.errors import AuthorizationError
 
@@ -66,16 +66,13 @@ class HttpClient:
             self.set_header({'Authorization': self.api_key})
         elif auth_type == 'bearerAuth':
             self.auth_type = 'login'
-            try:
-                login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login')
-            except PathAccessError:
-                login_details = {}
+            login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login', default={})
             self.login_url = login_details.get('login_url', None)
             login_inputs = login_details.get('login_inputs', [])
             self.login_args = {}
             for key in auth_kwargs:
                 if key in login_inputs:
-                    self.login_args[key] = auth_kwargs[key]
+                    self.login_args[key] = auth_kwargs[key] or False
             self.refresh_input_keys = login_details.get('refresh_inputs', [])
             self.login_response_keys = login_details.get('outputs', [])
 
