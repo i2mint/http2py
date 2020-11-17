@@ -1,12 +1,14 @@
-from http2py import dispatch_cli
+import argh
+from typing import Iterable
 
-OTOSENSE_ANNOTATION_SERVICE_URL = 'https://api.otosense.analogcloudsandbox.io/v3/annotations/openapi'
+from http2py.cli_maker import mk_argparse_friendly
+from i2.io_trans import AnnotAndDfltIoTrans
 
-from osys.handlers import source_handler_list, mk_source_configs
-from py2http import mk_http_service
-source_service = mk_http_service(
-    source_handler_list[0:1], **mk_source_configs()
-)
+def myfun(a: int, b: Iterable[int]):
+    print(f'a: {a} {type(a)}')
+    print(f'b: {b} {type(b)}')
 
 if __name__ == '__main__':
-    dispatch_cli(source_service.openapi_spec)
+    parser = argh.ArghParser()
+    parser.add_commands([mk_argparse_friendly(AnnotAndDfltIoTrans()(myfun))])
+    parser.dispatch()

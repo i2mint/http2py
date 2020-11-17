@@ -9,10 +9,10 @@ import requests
 from typing import Callable, Iterable
 import yaml
 
+from i2.io_trans import JSONAnnotAndDfltIoTrans
 from i2.signatures import set_signature_of_func, Sig, KO
 from http2py import HttpClient
-
-DFLT_CONFIG_FILENAME = os.path.join(Path.home(), '.http2py', 'credentials.json')
+from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 
 def mk_sig_argparse_friendly(sig):
     """Modifies a signature to change all leading underscores in param names
@@ -40,15 +40,19 @@ def mk_argparse_friendly(func):
             else:
                 mapped_argname = argname
             mapped_kwargs[mapped_argname] = argvalue
-        return func(*args, **mapped_kwargs)
+        # convert strings into correct JSON types
+        io_trans = JSONAnnotAndDfltIoTrans()
+        return io_trans(func)(*args, **mapped_kwargs)
     return new_sig(_func)
+
 
 
 def mk_cli(openapi_spec: dict = '',
            url: str = '',
            filename: str = '',
            parse_yaml: bool = False,
-           config_filename: str = DFLT_CONFIG_FILENAME):
+           config_filename: str = DFLT_CONFIG_FILENAME,
+           profile: str = ''):
     """Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.
     Accepts either an OpenAPI spec dict, a url, or path to a local file.
 
@@ -102,7 +106,8 @@ def register_cli_method(
         openapi_spec: dict,
         client_method: Callable,
         expected_auth_kwargs: Iterable[str] = None,
-        config_filename: str = DFLT_CONFIG_FILENAME):
+        config_filename: str = DFLT_CONFIG_FILENAME,
+        profile: str = ''):
     """Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
     arguments and call a particular method of the client instance
 
@@ -121,15 +126,9 @@ def register_cli_method(
         *[{'name': kwarg, 'kind': KO, 'default': ''} for kwarg in expected_auth_kwargs],
           {'name': 'config', 'kind': KO, 'default': config_filename}])
     def cli_method(*args, **kwargs):
-        auth_kwargs = {key: kwargs.pop(key) for key in expected_auth_kwargs}
         config_filename = kwargs.pop('config')
-        stored_auth = {}
-        for kwarg in expected_auth_kwargs:
-            if not auth_kwargs.get(kwarg, ''):
-                if not stored_auth:
-                    with open(config_filename) as fp:
-                        stored_auth = json.load(fp)
-                auth_kwargs[kwarg] = stored_auth.get(kwarg, '')
+        auth_kwargs = {key: kwargs.pop(key) for key in expected_auth_kwargs}
+        auth_kwargs = mk_auth(auth_kwargs, expected_auth_kwargs, config_filename, profile)
         http_client = HttpClient(openapi_spec, **auth_kwargs)
         return getattr(http_client, methodname)(**kwargs)
     method_sig.wrap(cli_method)

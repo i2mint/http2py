@@ -2,6 +2,7 @@ from glom import glom
 from requests import request, Session
 from i2.errors import AuthorizationError
 
+from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 from http2py.py2request import mk_method_spec_from_openapi_method_spec, mk_request_function
 from http2py.global_state import get_global_state
 
@@ -12,6 +13,7 @@ class HttpClient:
     defined with an OpenAPI spec.
     """
     auth_type = ''
+    login_input_keys = []
     login_url = ''
     openapi_spec = {}
     refresh_url = ''
@@ -68,10 +70,10 @@ class HttpClient:
             self.auth_type = 'login'
             login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login', default={})
             self.login_url = login_details.get('login_url', None)
-            login_inputs = login_details.get('login_inputs', [])
+            self.login_input_keys = login_details.get('login_inputs', [])
             self.login_args = {}
             for key in auth_kwargs:
-                if key in login_inputs:
+                if key in self.login_input_keys:
                     self.login_args[key] = auth_kwargs[key] or False
             self.refresh_input_keys = login_details.get('refresh_inputs', [])
             self.login_response_keys = login_details.get('outputs', [])
@@ -132,3 +134,12 @@ class HttpClient:
                 self.set_header(auth_header)
             elif key in self.refresh_input_keys:
                 self.refresh_inputs[key] = value
+
+    def set_profile(self, profile: str, config: str = DFLT_CONFIG_FILENAME):
+        new_auth = mk_auth({}, self.login_input_keys, config, profile)
+        if not new_auth:
+            raise KeyError(f'Could not find authentication credentials for profile {profile} in file {config}')
+        for key in new_auth:
+            if key in self.login_input_keys:
+                self.login_args[key] = new_auth[key] or False
+            self.login()
