@@ -18,7 +18,13 @@ setup(
     author='Thor Whalen',
     license='Apache',
     packages=find_packages(),
-    install_requires=['requests'],
+    install_requires=[
+        'glom==20.8.0',
+        'i2==0.0.6',
+        'requests==2.24.0',
+        'argh==0.26.2',
+        'PyYAML==5.3.1'
+    ],
     include_package_data=True,
     zip_safe=False,
     # download_url='https://github.com/i2mint/{name}/archive/v{version}.zip',
