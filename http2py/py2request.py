@@ -34,12 +34,17 @@ from inspect import signature, Parameter
 from glom import glom
 from requests import request
 import string
+
 # import io
 import re
 from typing import Any, Union
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
-from http2py.default_configs import default_json_output_trans, default_text_output_trans, default_content_output_trans
+from http2py.default_configs import (
+    default_json_output_trans,
+    default_text_output_trans,
+    default_content_output_trans,
+)
 
 with I2mintModuleNotFoundErrorNiceMessage():
     from i2.util import inject_method, imdict
@@ -51,8 +56,15 @@ DFLT_REQUEST_METHOD = 'GET'
 DFLT_REQUEST_KWARGS = imdict({'method': DFLT_REQUEST_METHOD, 'url': ''})
 
 pytype_for_oatype = {
-    'string': str, 'number': Union[float, int], 'integer': int, 'array': list, 'object': dict, 'boolean': bool, '{}': Any
+    'string': str,
+    'number': Union[float, int],
+    'integer': int,
+    'array': list,
+    'object': dict,
+    'boolean': bool,
+    '{}': Any,
 }
+
 
 def identity_func(x):
     return x
@@ -71,7 +83,9 @@ def mk_default_completion_validator(dflt_kwargs=DFLT_REQUEST_KWARGS):
 
 
 def all_necessary_fields_validator(kwargs):
-    assert 'method' in kwargs and 'url' in kwargs, "Need both a method and a url field!"
+    assert (
+        'method' in kwargs and 'url' in kwargs
+    ), 'Need both a method and a url field!'
     return kwargs
 
 
@@ -86,11 +100,11 @@ def mk_param_spec_from_arg_schema(arg, required=False):
         'name': arg['name'],
     }
     if 'default' in arg:
-        spec_dict['default'] = (arg['default'])
+        spec_dict['default'] = arg['default']
     elif not arg.get('required', required):
         spec_dict['default'] = None
     else:
-        spec_dict['default'] =Parameter.empty
+        spec_dict['default'] = Parameter.empty
     if 'type' in arg:
         spec_dict['annotation'] = arg['type']
     if 'kind' in arg:
@@ -100,7 +114,9 @@ def mk_param_spec_from_arg_schema(arg, required=False):
     return spec_dict
 
 
-def mk_request_function(method_spec, *, function_kind='method', dispatch=request):
+def mk_request_function(
+    method_spec, *, function_kind='method', dispatch=request
+):
     """
     Makes function that will make http requests for you, on your own terms.
 
@@ -144,14 +160,16 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
 
     request_kwargs = method_spec.get('request_kwargs', {}).copy()
-    method = method_spec.pop('method',
-                             request_kwargs.pop('method',
-                                                DFLT_REQUEST_METHOD))
+    method = method_spec.pop(
+        'method', request_kwargs.pop('method', DFLT_REQUEST_METHOD)
+    )
     path_arg_names = _ensure_list(method_spec.get('path_arg_names', []))
     query_arg_names = _ensure_list(method_spec.get('query_arg_names', []))
     body_arg_names = _ensure_list(method_spec.get('body_arg_names', []))
     arg_specs = method_spec.get('arg_specs', [])
-    formatted_arg_specs = [mk_param_spec_from_arg_schema(arg) for arg in arg_specs]
+    formatted_arg_specs = [
+        mk_param_spec_from_arg_schema(arg) for arg in arg_specs
+    ]
     func_args = path_arg_names + query_arg_names + body_arg_names
 
     debug = method_spec.pop('debug', None)
@@ -172,7 +190,6 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
-
         def get_req_param_key():
             content_type = method_spec.get('content_type', 'text/plain')
             if content_type == 'text/plain':
@@ -182,7 +199,10 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
             if content_type == 'application/octet-stream':
                 return 'stream'
 
-        kwargs = dict(kwargs, **{argname: argval for argname, argval in zip(func_args, args)})
+        kwargs = dict(
+            kwargs,
+            **{argname: argval for argname, argval in zip(func_args, args)},
+        )
 
         # convert argument types TODO: Not efficient. Might could be revised.
         for arg_name, converter in method_spec.get('input_trans', {}).items():
@@ -195,8 +215,12 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         if 'url_template' in method_spec:
             url_template = method_spec['url_template']
             # Check if the url template already have parameters, add them otherwise
-            if query_arg_names and not re.search("^.*\?((.*=.*)(&?))+$", url_template):
-                url_arg_parts = [f'{x}={{{x}}}' for x in query_arg_names if x in kwargs]
+            if query_arg_names and not re.search(
+                '^.*\?((.*=.*)(&?))+$', url_template
+            ):
+                url_arg_parts = [
+                    f'{x}={{{x}}}' for x in query_arg_names if x in kwargs
+                ]
                 url_args = '&'.join(url_arg_parts)
                 url_template += f'?{url_args}'
             url = url_template.format(**kwargs)
@@ -208,7 +232,11 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json}
         if remaining_kwargs:
             req_param_key = get_req_param_key()
-            _request_kwargs[req_param_key] = {k: v for k, v in remaining_kwargs.items() if k in body_arg_names}
+            _request_kwargs[req_param_key] = {
+                k: v
+                for k, v in remaining_kwargs.items()
+                if k in body_arg_names
+            }
 
         if debug is not None:
             if debug == 'print_request_kwargs':
@@ -232,7 +260,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     else:
         if formatted_arg_specs:
             if function_kind == 'method':
-                set_signature_of_func(request_func, ['self'] + formatted_arg_specs)
+                set_signature_of_func(
+                    request_func, ['self'] + formatted_arg_specs
+                )
             elif function_kind == 'function':
                 set_signature_of_func(request_func, formatted_arg_specs)
 
@@ -247,7 +277,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
     if docstring:
         request_func.__doc__ = docstring
 
-    assert callable(output_trans), f'output_trans {output_trans} is not callable, try again'
+    assert callable(
+        output_trans
+    ), f'output_trans {output_trans} is not callable, try again'
     return request_func
 
 
@@ -259,8 +291,12 @@ str_formatter = string.Formatter()
 class Py2Request(object):
     """ Make a class that has methods that offer a python interface to web requests """
 
-    def __init__(self, method_specs=None,
-                 method_func_from_method_spec=DFLT_METHOD_FUNC_FROM_METHOD_SPEC, **kwargs):
+    def __init__(
+        self,
+        method_specs=None,
+        method_func_from_method_spec=DFLT_METHOD_FUNC_FROM_METHOD_SPEC,
+        **kwargs,
+    ):
         """
         Initialize the object with web request calling methods.
         You can also just make an empty Py2Request object, and inject methods later on, one by one.
@@ -329,16 +365,29 @@ class Py2Request(object):
         self._process_method_specs()
 
         for method_name, method_spec in self._method_specs.items():
-            self._inject_method(method_name, method_spec, method_func_from_method_spec)
+            self._inject_method(
+                method_name, method_spec, method_func_from_method_spec
+            )
 
     def _process_method_specs(self):
         if self._dflt_method_func_from_method_spec == mk_request_function:
             for method_name, method_spec in self._method_specs.items():
                 if 'args' not in method_spec and 'url_template' in method_spec:
-                    method_spec['args'] = list(filter(bool,
-                                                      (x[1] for x in str_formatter.parse(method_spec['url_template']))))
+                    method_spec['args'] = list(
+                        filter(
+                            bool,
+                            (
+                                x[1]
+                                for x in str_formatter.parse(
+                                    method_spec['url_template']
+                                )
+                            ),
+                        )
+                    )
 
-    def _inject_method(self, method_name, method_spec, method_func_from_method_spec=None):
+    def _inject_method(
+        self, method_name, method_spec, method_func_from_method_spec=None
+    ):
         method_wrap = None
         if not callable(method_spec):
             method_spec = dict(**method_spec)
@@ -347,7 +396,9 @@ class Py2Request(object):
                 args = method_spec.get('args', [])
             method_wrap = method_spec.pop('method_wrap', None)
             if method_func_from_method_spec is None:
-                method_func_from_method_spec = self._dflt_method_func_from_method_spec
+                method_func_from_method_spec = (
+                    self._dflt_method_func_from_method_spec
+                )
             method_spec = method_func_from_method_spec(method_spec)
         inject_method(self, method_spec, method_name)
 
@@ -416,11 +467,20 @@ class UrlMethodSpecsMaker:
             elif isinstance(url_queries, (list, tuple, set)):
                 url_queries = {name: name for name in url_queries}
             # assert the general case where url query (key) and arg (val) names are different
-            assert isinstance(url_queries, dict), "url_queries should be a dict"
-            url_queries = dict(self.constant_url_query, **dict(url_queries, **more_url_queries))
+            assert isinstance(
+                url_queries, dict
+            ), 'url_queries should be a dict'
+            url_queries = dict(
+                self.constant_url_query,
+                **dict(url_queries, **more_url_queries),
+            )
             url_template += '?' + '&'.join(
-                map(lambda kv: f'{kv[0]}={{{kv[1]}}}', url_queries.items()))
-            d = {'url_template': url_template, 'args': list(url_queries.values())}
+                map(lambda kv: f'{kv[0]}={{{kv[1]}}}', url_queries.items())
+            )
+            d = {
+                'url_template': url_template,
+                'args': list(url_queries.values()),
+            }
         return dict(d, **self.constant_items)
 
 
@@ -441,12 +501,14 @@ def raw_response_on_error(func):
     return _func
 
 
-def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
-                                            method='post',
-                                            url_template='',
-                                            content_type='application/json',
-                                            input_trans=None,
-                                            output_trans=None):
+def mk_method_spec_from_openapi_method_spec(
+    openapi_method_spec,
+    method='post',
+    url_template='',
+    content_type='application/json',
+    input_trans=None,
+    output_trans=None,
+):
     path_arg_names = []
     query_arg_names = []
     body_arg_names = []
@@ -462,14 +524,22 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                 path_arg_names.append(argname)
             else:
                 if param.get('required'):
-                    arg_spec['required']   = True
+                    arg_spec['required'] = True
                 elif 'default' in param:
                     arg_spec['default'] = param['default']
                 query_arg_names.append(argname)
             arg_specs.append(arg_spec)
     if 'requestBody' in openapi_method_spec:
-        body_properties = glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.properties', default={})
-        required_properties = glom(openapi_method_spec, f'requestBody.content.{content_type}.schema.required', default=[])
+        body_properties = glom(
+            openapi_method_spec,
+            f'requestBody.content.{content_type}.schema.properties',
+            default={},
+        )
+        required_properties = glom(
+            openapi_method_spec,
+            f'requestBody.content.{content_type}.schema.required',
+            default=[],
+        )
         for argname, details in body_properties.items():
             body_arg_names.append(argname)
             argtype = details['type']
@@ -481,14 +551,21 @@ def mk_method_spec_from_openapi_method_spec(openapi_method_spec,
                 arg_spec['required'] = True
             arg_specs.append(arg_spec)
 
-
     method_spec = dict(
-        method=method, url_template=url_template, input_trans=input_trans, output_trans=output_trans,
-        path_arg_names=path_arg_names, query_arg_names=query_arg_names, body_arg_names=body_arg_names, 
+        method=method,
+        url_template=url_template,
+        input_trans=input_trans,
+        output_trans=output_trans,
+        path_arg_names=path_arg_names,
+        query_arg_names=query_arg_names,
+        body_arg_names=body_arg_names,
         method_name=openapi_method_spec.get('x-method_name', ''),
-        docstring=openapi_method_spec.get('description', ''), content_type=content_type, 
-        response_type=next(iter(glom(openapi_method_spec, f'responses.200.content'))),
-        arg_specs=arg_specs
+        docstring=openapi_method_spec.get('description', ''),
+        content_type=content_type,
+        response_type=next(
+            iter(glom(openapi_method_spec, f'responses.200.content'))
+        ),
+        arg_specs=arg_specs,
     )
     return method_spec
 
@@ -506,9 +583,12 @@ ParamsAble = Union[ParamsType, MappingType[str, Parameter], Callable]
 
 def _params_from_props(openapi_props):
     for name, p in openapi_props.items():
-        yield Parameter(name=name, kind=PK,
-                        default=p.get('default', Parameter.empty),
-                        annotation=p.get('type', Parameter.empty))
+        yield Parameter(
+            name=name,
+            kind=PK,
+            default=p.get('default', Parameter.empty),
+            annotation=p.get('type', Parameter.empty),
+        )
 
 
 def add_annots_from_openapi_props(func, openapi_props):
@@ -529,8 +609,14 @@ def _get_path_spec(path, openapi_spec):
     return openapi_spec['paths'][path]
 
 
-def mk_request_func_from_openapi_spec(path, openapi_spec, method='post', content_type='application/json',
-                                      input_trans=None, output_trans=None):
+def mk_request_func_from_openapi_spec(
+    path,
+    openapi_spec,
+    method='post',
+    content_type='application/json',
+    input_trans=None,
+    output_trans=None,
+):
     base_url = openapi_spec['servers'][0]['url']
     if base_url.endswith('/'):
         base_url = base_url[:-1]  # TODO: need a urljoin instead of this hack!
@@ -538,13 +624,19 @@ def mk_request_func_from_openapi_spec(path, openapi_spec, method='post', content
     url = base_url + path  # TODO: url join
     method = method or next(iter(path_spec))
     spec = path_spec[method]
-    method_spec = mk_method_spec_from_openapi_method_spec(spec, method=method, url_template=url,
-                                                          content_type=content_type,
-                                                          input_trans=input_trans,
-                                                          output_trans=output_trans)
+    method_spec = mk_method_spec_from_openapi_method_spec(
+        spec,
+        method=method,
+        url_template=url,
+        content_type=content_type,
+        input_trans=input_trans,
+        output_trans=output_trans,
+    )
 
     func = mk_request_function(method_spec, function_kind='function')
-    openapi_props = glom(spec, f'requestBody.content.{content_type}.schema.properties')
+    openapi_props = glom(
+        spec, f'requestBody.content.{content_type}.schema.properties'
+    )
     try:
         _, func_name = path.split('/')  # fragile way of getting the name
     except Exception:

@@ -2,7 +2,10 @@ from glom import glom
 from requests import request, Session
 from i2.errors import AuthorizationError
 
-from http2py.py2request import mk_method_spec_from_openapi_method_spec, mk_request_function
+from http2py.py2request import (
+    mk_method_spec_from_openapi_method_spec,
+    mk_request_function,
+)
 from http2py.global_state import get_global_state
 
 
@@ -11,6 +14,7 @@ class HttpClient:
     A client class meant as an interface to an HTTP service with one or more routes
     defined with an OpenAPI spec.
     """
+
     auth_type = ''
     login_url = ''
     openapi_spec = {}
@@ -44,18 +48,24 @@ class HttpClient:
         if not session_state:
             session_state = get_global_state(
                 'session_state',
-                {'session': self.session, 'refresh_inputs': {}}
+                {'session': self.session, 'refresh_inputs': {}},
             )
         self.session = session_state.get('session')
         if not self.session:
-            raise ValueError('No session provided when instantiating HttpClient')
+            raise ValueError(
+                'No session provided when instantiating HttpClient'
+            )
         self.refresh_inputs = session_state.get('refresh_inputs')
         if self.refresh_inputs is None:
-            raise ValueError('No refresh inputs provided when instantiating HttpClient')
+            raise ValueError(
+                'No refresh inputs provided when instantiating HttpClient'
+            )
         for pathname, path_spec in openapi_spec['paths'].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
-                self.register_method(url_template, http_method, openapi_method_spec)
+                self.register_method(
+                    url_template, http_method, openapi_method_spec
+                )
 
     def init_security(self, openapi_spec, **auth_kwargs):
         security = openapi_spec['security']
@@ -66,7 +76,11 @@ class HttpClient:
             self.set_header({'Authorization': self.api_key})
         elif auth_type == 'bearerAuth':
             self.auth_type = 'login'
-            login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login', default={})
+            login_details = glom(
+                openapi_spec,
+                'components.securitySchemes.bearerAuth.x-login',
+                default={},
+            )
             self.login_url = login_details.get('login_url', None)
             login_inputs = login_details.get('login_inputs', [])
             self.login_args = {}
@@ -79,11 +93,15 @@ class HttpClient:
     def register_method(self, url_template, http_method, openapi_method_spec):
         content_type = None
         if 'requestBody' in openapi_method_spec:
-            content_type = next(iter(glom(openapi_method_spec, 'requestBody.content').keys()))
-        method_spec = mk_method_spec_from_openapi_method_spec(openapi_method_spec,
-                                                              method=http_method,
-                                                              url_template=url_template,
-                                                              content_type=content_type)
+            content_type = next(
+                iter(glom(openapi_method_spec, 'requestBody.content').keys())
+            )
+        method_spec = mk_method_spec_from_openapi_method_spec(
+            openapi_method_spec,
+            method=http_method,
+            url_template=url_template,
+            content_type=content_type,
+        )
         func = mk_request_function(method_spec, dispatch=self.handle_request)
         func.method_spec = method_spec
         func.content_type = content_type
@@ -97,7 +115,6 @@ class HttpClient:
     def set_header(self, header):
         self.session.headers.update(header)
 
-
     def ensure_login(self):
         if self.auth_type != 'login':
             return True
@@ -107,18 +124,26 @@ class HttpClient:
 
     def login(self):
         if not self.login_url:
-            raise ValueError('Login was called without a login url. '
-                             'Check your initialization arguments for HttpClient.')
+            raise ValueError(
+                'Login was called without a login url. '
+                'Check your initialization arguments for HttpClient.'
+            )
         if not self.login_args:
-            raise ValueError('Login was called without any login inputs. '
-                             'Check your initialization arguments for HttpClient.')
-        login_result = request('post', self.login_url, json=self.login_args).json()
+            raise ValueError(
+                'Login was called without any login inputs. '
+                'Check your initialization arguments for HttpClient.'
+            )
+        login_result = request(
+            'post', self.login_url, json=self.login_args
+        ).json()
         return self.receive_login(login_result)
 
     def refresh_login(self):
         if not self.refresh_url or not self.refresh_inputs:
             return self.login()
-        refresh_result = request('post', self.refresh_url, json=self.refresh_inputs).json()
+        refresh_result = request(
+            'post', self.refresh_url, json=self.refresh_inputs
+        ).json()
         return self.receive_login(refresh_result)
 
     def receive_login(self, login_result):

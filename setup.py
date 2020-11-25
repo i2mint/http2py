@@ -7,13 +7,13 @@ def readme():
 
 
 name = 'http2py'
-version = '0.1.0'
+version = '0.1.3'
 setup(
     name=f'{name}',
     version=f'{version}',
     description='Tools to create python binders to http web services.',
     long_description=readme(),
-    long_description_content_type="text/markdown",
+    long_description_content_type='text/markdown',
     url=f'https://github.com/i2mint/{name}',
     author='Thor Whalen',
     license='Apache',
@@ -23,7 +23,7 @@ setup(
         'i2==0.0.6',
         'requests==2.24.0',
         'argh==0.26.2',
-        'PyYAML==5.3.1'
+        'PyYAML==5.3.1',
     ],
     include_package_data=True,
     zip_safe=False,
@@ -35,7 +35,6 @@ setup(
         # "3 - Alpha",
         # "4 - Beta" or
         # "5 - Production/Stable" as the current state.
-
         'Intended Audience :: Developers',
         'Topic :: Software Development',
         'License :: OSI Approved :: Apache Software License',

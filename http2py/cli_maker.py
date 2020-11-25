@@ -12,7 +12,10 @@ import yaml
 from i2.signatures import set_signature_of_func, Sig, KO
 from http2py import HttpClient
 
-DFLT_CONFIG_FILENAME = os.path.join(Path.home(), '.http2py', 'credentials.json')
+DFLT_CONFIG_FILENAME = os.path.join(
+    Path.home(), '.http2py', 'credentials.json'
+)
+
 
 def mk_sig_argparse_friendly(sig):
     """Modifies a signature to change all leading underscores in param names
@@ -21,7 +24,9 @@ def mk_sig_argparse_friendly(sig):
         if argname.startswith('_'):
             argname = argname[1:] + '_'
             argspec = argspec.replace(name=argname)
-            assert argname not in sig.names, f"{argname} was already in {sig.names}"
+            assert (
+                argname not in sig.names
+            ), f'{argname} was already in {sig.names}'
         yield argname, argspec
 
 
@@ -30,7 +35,10 @@ def mk_argparse_friendly(func):
     underscores from all keyword arguments, but does not mutate the signature of the original function"""
     orig_sig = Sig(func)
     new_params = dict(mk_sig_argparse_friendly(orig_sig))
-    new_sig = orig_sig.replace(parameters=new_params, return_annotation=orig_sig.return_annotation)
+    new_sig = orig_sig.replace(
+        parameters=new_params, return_annotation=orig_sig.return_annotation
+    )
+
     @wraps(func)
     def _func(*args, **kwargs):
         mapped_kwargs = {}
@@ -41,14 +49,17 @@ def mk_argparse_friendly(func):
                 mapped_argname = argname
             mapped_kwargs[mapped_argname] = argvalue
         return func(*args, **mapped_kwargs)
+
     return new_sig(_func)
 
 
-def mk_cli(openapi_spec: dict = '',
-           url: str = '',
-           filename: str = '',
-           parse_yaml: bool = False,
-           config_filename: str = DFLT_CONFIG_FILENAME):
+def mk_cli(
+    openapi_spec: dict = '',
+    url: str = '',
+    filename: str = '',
+    parse_yaml: bool = False,
+    config_filename: str = DFLT_CONFIG_FILENAME,
+):
     """Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.
     Accepts either an OpenAPI spec dict, a url, or path to a local file.
 
@@ -66,7 +77,9 @@ def mk_cli(openapi_spec: dict = '',
             with open(filename) as fp:
                 raw_spec = fp.read()
         else:
-            raise ValueError('You must provide an OpenAPI spec dict, url, or filename.')
+            raise ValueError(
+                'You must provide an OpenAPI spec dict, url, or filename.'
+            )
         if raw_spec:
             if parse_yaml:
                 openapi_spec = yaml.safe_load(raw_spec)
@@ -81,11 +94,18 @@ def mk_cli(openapi_spec: dict = '',
         if auth_type == 'apiKey':
             expected_auth_kwargs = ['api_key']
         elif auth_type == 'bearerAuth':
-            login_details = glom(openapi_spec, 'components.securitySchemes.bearerAuth.x-login', default={})
+            login_details = glom(
+                openapi_spec,
+                'components.securitySchemes.bearerAuth.x-login',
+                default={},
+            )
             expected_auth_kwargs = login_details.get('login_inputs', [])
     client_details = HttpClient(openapi_spec)
-    cli_methods = [register_cli_method(openapi_spec, method, expected_auth_kwargs)
-                   for methodname, method in client_details.__dict__.items() if getattr(method, 'method_spec', None)]
+    cli_methods = [
+        register_cli_method(openapi_spec, method, expected_auth_kwargs)
+        for methodname, method in client_details.__dict__.items()
+        if getattr(method, 'method_spec', None)
+    ]
     parser = argh.ArghParser()
     parser.add_commands(cli_methods)
     return parser
@@ -96,13 +116,16 @@ def dispatch_cli(*args, **kwargs):
     parser = mk_cli(*args, **kwargs)
     parser.dispatch()
 
+
 set_signature_of_func(dispatch_cli, signature(mk_cli))
 
+
 def register_cli_method(
-        openapi_spec: dict,
-        client_method: Callable,
-        expected_auth_kwargs: Iterable[str] = None,
-        config_filename: str = DFLT_CONFIG_FILENAME):
+    openapi_spec: dict,
+    client_method: Callable,
+    expected_auth_kwargs: Iterable[str] = None,
+    config_filename: str = DFLT_CONFIG_FILENAME,
+):
     """Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
     arguments and call a particular method of the client instance
 
@@ -117,9 +140,16 @@ def register_cli_method(
     method_sig = Sig(client_method)
     if not expected_auth_kwargs:
         expected_auth_kwargs = []
-    method_sig = method_sig.merge_with_sig([
-        *[{'name': kwarg, 'kind': KO, 'default': ''} for kwarg in expected_auth_kwargs],
-          {'name': 'config', 'kind': KO, 'default': config_filename}])
+    method_sig = method_sig.merge_with_sig(
+        [
+            *[
+                {'name': kwarg, 'kind': KO, 'default': ''}
+                for kwarg in expected_auth_kwargs
+            ],
+            {'name': 'config', 'kind': KO, 'default': config_filename},
+        ]
+    )
+
     def cli_method(*args, **kwargs):
         auth_kwargs = {key: kwargs.pop(key) for key in expected_auth_kwargs}
         config_filename = kwargs.pop('config')
@@ -132,6 +162,7 @@ def register_cli_method(
                 auth_kwargs[kwarg] = stored_auth.get(kwarg, '')
         http_client = HttpClient(openapi_spec, **auth_kwargs)
         return getattr(http_client, methodname)(**kwargs)
+
     method_sig.wrap(cli_method)
     cli_method.__name__ = methodname
     return mk_argparse_friendly(cli_method)

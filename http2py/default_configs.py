@@ -1,4 +1,8 @@
-from http2py.decorators import handle_text_resp, handle_json_resp, handle_content_resp
+from http2py.decorators import (
+    handle_text_resp,
+    handle_json_resp,
+    handle_content_resp,
+)
 
 
 @handle_text_resp
