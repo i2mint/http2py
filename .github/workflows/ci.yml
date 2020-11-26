@@ -28,8 +28,8 @@ jobs:
       - name: Format source code
         run: black --line-length=79 .
 
-      # - name: Validate docstrings
-      #   run: pylint ./$PROJECT_NAME --disable=all --enable=C0114,C0115,C0116
+      - name: Validate docstrings
+        run: pylint ./$PROJECT_NAME --disable=all --enable=C0114,C0115,C0116
 
       - name: Test
         run: pytest --doctest-modules -v
