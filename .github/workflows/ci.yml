@@ -82,7 +82,7 @@ jobs:
         run: |
           export VERSION=$($SCRIPTS_DIR/gen_semver.py)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          $SCRIPTS_DIR/update_setup.py
+          $SCRIPTS_DIR/update_setup_cfg.py
 
       - name: Publish
         run: |
