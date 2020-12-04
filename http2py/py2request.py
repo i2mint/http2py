@@ -517,7 +517,7 @@ def mk_method_spec_from_openapi_method_spec(
         params = openapi_method_spec['parameters']
         for param in params:
             argname = param['name']
-            argtype = param['type']
+            argtype = param['schema']['type']
             arg_spec = {'name': argname, 'type': pytype_for_oatype[argtype]}
             if param.get('in', 'path') == 'path':
                 arg_spec['required'] = True
