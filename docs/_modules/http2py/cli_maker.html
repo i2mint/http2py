@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>http2py.cli_maker &#8212; http2py 0.1.5 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for http2py.cli_maker</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">argh</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">glom</span> <span class="kn">import</span> <span class="n">glom</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+
+<span class="kn">from</span> <span class="nn">i2.signatures</span> <span class="kn">import</span> <span class="n">set_signature_of_func</span><span class="p">,</span> <span class="n">Sig</span><span class="p">,</span> <span class="n">KO</span>
+<span class="kn">from</span> <span class="nn">http2py</span> <span class="kn">import</span> <span class="n">HttpClient</span>
+
+<span class="n">DFLT_CONFIG_FILENAME</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">(),</span> <span class="s1">&#39;.http2py&#39;</span><span class="p">,</span> <span class="s1">&#39;credentials.json&#39;</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="mk_sig_argparse_friendly"><a class="viewcode-back" href="../../module_docs/http2py/cli_maker.html#http2py.cli_maker.mk_sig_argparse_friendly">[docs]</a><span class="k">def</span> <span class="nf">mk_sig_argparse_friendly</span><span class="p">(</span><span class="n">sig</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Modifies a signature to change all leading underscores in param names</span>
+<span class="sd">    to trailing underscores, to ensure compatibility with argparse&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">argname</span><span class="p">,</span> <span class="n">argspec</span> <span class="ow">in</span> <span class="n">sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">argname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+            <span class="n">argname</span> <span class="o">=</span> <span class="n">argname</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+            <span class="n">argspec</span> <span class="o">=</span> <span class="n">argspec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">argname</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="p">(</span>
+                <span class="n">argname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sig</span><span class="o">.</span><span class="n">names</span>
+            <span class="p">),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">argname</span><span class="si">}</span><span class="s1"> was already in </span><span class="si">{</span><span class="n">sig</span><span class="o">.</span><span class="n">names</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">yield</span> <span class="n">argname</span><span class="p">,</span> <span class="n">argspec</span></div>
+
+
+<div class="viewcode-block" id="mk_argparse_friendly"><a class="viewcode-back" href="../../module_docs/http2py/cli_maker.html#http2py.cli_maker.mk_argparse_friendly">[docs]</a><span class="k">def</span> <span class="nf">mk_argparse_friendly</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wraps a function to expose a signature that is compatible with argparse by stripping leading</span>
+<span class="sd">    underscores from all keyword arguments, but does not mutate the signature of the original function&quot;&quot;&quot;</span>
+    <span class="n">orig_sig</span> <span class="o">=</span> <span class="n">Sig</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="n">new_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">mk_sig_argparse_friendly</span><span class="p">(</span><span class="n">orig_sig</span><span class="p">))</span>
+    <span class="n">new_sig</span> <span class="o">=</span> <span class="n">orig_sig</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+        <span class="n">parameters</span><span class="o">=</span><span class="n">new_params</span><span class="p">,</span> <span class="n">return_annotation</span><span class="o">=</span><span class="n">orig_sig</span><span class="o">.</span><span class="n">return_annotation</span>
+    <span class="p">)</span>
+
+    <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">mapped_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">argname</span><span class="p">,</span> <span class="n">argvalue</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">argname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">param</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">orig_sig</span><span class="o">.</span><span class="n">params</span><span class="p">]:</span>
+                <span class="n">mapped_argname</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">argname</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mapped_argname</span> <span class="o">=</span> <span class="n">argname</span>
+            <span class="n">mapped_kwargs</span><span class="p">[</span><span class="n">mapped_argname</span><span class="p">]</span> <span class="o">=</span> <span class="n">argvalue</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">mapped_kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_sig</span><span class="p">(</span><span class="n">_func</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mk_cli"><a class="viewcode-back" href="../../module_docs/http2py/cli_maker.html#http2py.cli_maker.mk_cli">[docs]</a><span class="k">def</span> <span class="nf">mk_cli</span><span class="p">(</span>
+    <span class="n">openapi_spec</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="n">parse_yaml</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">config_filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_CONFIG_FILENAME</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.</span>
+<span class="sd">    Accepts either an OpenAPI spec dict, a url, or path to a local file.</span>
+
+<span class="sd">    :param openapi_spec: An OpenAPI service specification</span>
+<span class="sd">    :param url: A URL for an OpenAPI spec that can be accessed with an HTTP GET request</span>
+<span class="sd">    :param filename: The path to a local file that contains an OpenAPI spec</span>
+<span class="sd">    :param parse_yaml: A flag to indicate that the provided OpenAPI spec is in YAML format rather than JSON (default: False)</span>
+<span class="sd">    :param config_filename: The path to a local config file that contains authentication details for the HTTP service</span>
+<span class="sd">        in JSON format (default: ~/.http2cli/credentials.json</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">openapi_spec</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+            <span class="n">raw_spec</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">elif</span> <span class="n">filename</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+                <span class="n">raw_spec</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;You must provide an OpenAPI spec dict, url, or filename.&#39;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">raw_spec</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parse_yaml</span><span class="p">:</span>
+                <span class="n">openapi_spec</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">raw_spec</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">openapi_spec</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">raw_spec</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;No valid OpenAPI spec found.&#39;</span><span class="p">)</span>
+    <span class="n">security</span> <span class="o">=</span> <span class="n">openapi_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;security&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">expected_auth_kwargs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">security</span><span class="p">:</span>
+        <span class="n">auth_type</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">security</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">auth_type</span> <span class="o">==</span> <span class="s1">&#39;apiKey&#39;</span><span class="p">:</span>
+            <span class="n">expected_auth_kwargs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;api_key&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">auth_type</span> <span class="o">==</span> <span class="s1">&#39;bearerAuth&#39;</span><span class="p">:</span>
+            <span class="n">login_details</span> <span class="o">=</span> <span class="n">glom</span><span class="p">(</span>
+                <span class="n">openapi_spec</span><span class="p">,</span>
+                <span class="s1">&#39;components.securitySchemes.bearerAuth.x-login&#39;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="p">{},</span>
+            <span class="p">)</span>
+            <span class="n">expected_auth_kwargs</span> <span class="o">=</span> <span class="n">login_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;login_inputs&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">client_details</span> <span class="o">=</span> <span class="n">HttpClient</span><span class="p">(</span><span class="n">openapi_spec</span><span class="p">)</span>
+    <span class="n">cli_methods</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">register_cli_method</span><span class="p">(</span><span class="n">openapi_spec</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">expected_auth_kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">methodname</span><span class="p">,</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">client_details</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="s1">&#39;method_spec&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argh</span><span class="o">.</span><span class="n">ArghParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_commands</span><span class="p">(</span><span class="n">cli_methods</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">parser</span></div>
+
+
+<div class="viewcode-block" id="dispatch_cli"><a class="viewcode-back" href="../../module_docs/http2py/cli_maker.html#http2py.cli_maker.dispatch_cli">[docs]</a><span class="k">def</span> <span class="nf">dispatch_cli</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Makes a CLI parser with mk_cli and then dispatches it (see documentation of mk_cli)&quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">mk_cli</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">dispatch</span><span class="p">()</span></div>
+
+
+<span class="n">set_signature_of_func</span><span class="p">(</span><span class="n">dispatch_cli</span><span class="p">,</span> <span class="n">signature</span><span class="p">(</span><span class="n">mk_cli</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="register_cli_method"><a class="viewcode-back" href="../../module_docs/http2py/cli_maker.html#http2py.cli_maker.register_cli_method">[docs]</a><span class="k">def</span> <span class="nf">register_cli_method</span><span class="p">(</span>
+    <span class="n">openapi_spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">client_method</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">expected_auth_kwargs</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_CONFIG_FILENAME</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication</span>
+<span class="sd">    arguments and call a particular method of the client instance</span>
+
+<span class="sd">    :param openapi_spec: The OpenAPI spec used to make the client</span>
+<span class="sd">    :param client_method: The instance method to wrap</span>
+<span class="sd">    :param expected_auth_kwargs: A list of authentication kwargs that the CLI should ask for</span>
+<span class="sd">        (defaults to empty list)</span>
+<span class="sd">    :param config_filename: The path to a JSON file to read for authentication kwargs</span>
+<span class="sd">        (defaults to ~/.http2py/credentials.json)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">methodname</span> <span class="o">=</span> <span class="n">client_method</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="n">method_sig</span> <span class="o">=</span> <span class="n">Sig</span><span class="p">(</span><span class="n">client_method</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">expected_auth_kwargs</span><span class="p">:</span>
+        <span class="n">expected_auth_kwargs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">method_sig</span> <span class="o">=</span> <span class="n">method_sig</span><span class="o">.</span><span class="n">merge_with_sig</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="o">*</span><span class="p">[</span>
+                <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">kwarg</span><span class="p">,</span> <span class="s1">&#39;kind&#39;</span><span class="p">:</span> <span class="n">KO</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">}</span>
+                <span class="k">for</span> <span class="n">kwarg</span> <span class="ow">in</span> <span class="n">expected_auth_kwargs</span>
+            <span class="p">],</span>
+            <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="s1">&#39;kind&#39;</span><span class="p">:</span> <span class="n">KO</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="n">config_filename</span><span class="p">},</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">cli_method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">auth_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">expected_auth_kwargs</span><span class="p">}</span>
+        <span class="n">config_filename</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">)</span>
+        <span class="n">stored_auth</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">kwarg</span> <span class="ow">in</span> <span class="n">expected_auth_kwargs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">auth_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kwarg</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">stored_auth</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+                        <span class="n">stored_auth</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
+                <span class="n">auth_kwargs</span><span class="p">[</span><span class="n">kwarg</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored_auth</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kwarg</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">http_client</span> <span class="o">=</span> <span class="n">HttpClient</span><span class="p">(</span><span class="n">openapi_spec</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">http_client</span><span class="p">,</span> <span class="n">methodname</span><span class="p">)(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">method_sig</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">cli_method</span><span class="p">)</span>
+    <span class="n">cli_method</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">methodname</span>
+    <span class="k">return</span> <span class="n">mk_argparse_friendly</span><span class="p">(</span><span class="n">cli_method</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">http2py</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py.html">http2py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/cli_maker.html">http2py.cli_maker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/client.html">http2py.client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/decorators.html">http2py.decorators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/default_configs.html">http2py.default_configs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/example_cli.html">http2py.example_cli</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/global_state.html">http2py.global_state</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/http2py_cls.html">http2py.http2py_cls</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/py2request.html">http2py.py2request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/testing_utils.html">http2py.testing_utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/util.html">http2py.util</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;
+2020
+Otosense.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,15 @@
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   module_docs/http2py
+   module_docs/http2py/cli_maker
+   module_docs/http2py/client
+   module_docs/http2py/decorators
+   module_docs/http2py/default_configs
+   module_docs/http2py/example_cli
+   module_docs/http2py/global_state
+   module_docs/http2py/http2py_cls
+   module_docs/http2py/py2request
+   module_docs/http2py/testing_utils
+   module_docs/http2py/util
