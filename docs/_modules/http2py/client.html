@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>http2py.client &#8212; http2py 0.1.6 documentation</title>
+    <title>http2py.client &#8212; http2py 0.1.7 documentation</title>
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
@@ -34,9 +34,10 @@
             
   <h1>Source code for http2py.client</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">glom</span> <span class="kn">import</span> <span class="n">glom</span>
-<span class="kn">from</span> <span class="nn">requests</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">requests</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">get</span><span class="p">,</span> <span class="n">Session</span>
 <span class="kn">from</span> <span class="nn">i2.errors</span> <span class="kn">import</span> <span class="n">AuthorizationError</span>
 
+<span class="kn">from</span> <span class="nn">http2py.authentication</span> <span class="kn">import</span> <span class="n">mk_auth</span><span class="p">,</span> <span class="n">DFLT_CONFIG_FILENAME</span>
 <span class="kn">from</span> <span class="nn">http2py.py2request</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">mk_method_spec_from_openapi_method_spec</span><span class="p">,</span>
     <span class="n">mk_request_function</span><span class="p">,</span>
@@ -51,13 +52,16 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">auth_type</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">login_input_keys</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">login_url</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">openapi_spec</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">refresh_url</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">refresh_input_keys</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">session</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="p">,</span> <span class="n">session_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">session_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the client with an OpenAPI spec and optional authentication inputs</span>
 
@@ -71,6 +75,8 @@
 <span class="sd">              Input values to be passed to the login url, if using bearer auth</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">url</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">openapi_spec</span><span class="p">:</span>
+            <span class="n">openapi_spec</span> <span class="o">=</span> <span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">openapi_spec</span> <span class="o">=</span> <span class="n">openapi_spec</span>
         <span class="n">server_info</span> <span class="o">=</span> <span class="n">openapi_spec</span><span class="p">[</span><span class="s1">&#39;info&#39;</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">server_info</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
@@ -117,10 +123,10 @@
                 <span class="n">default</span><span class="o">=</span><span class="p">{},</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">login_url</span> <span class="o">=</span> <span class="n">login_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;login_url&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="n">login_inputs</span> <span class="o">=</span> <span class="n">login_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;login_inputs&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">login_input_keys</span> <span class="o">=</span> <span class="n">login_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;login_inputs&#39;</span><span class="p">,</span> <span class="p">[])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">login_args</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">auth_kwargs</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">login_inputs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_input_keys</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">login_args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">auth_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">or</span> <span class="kc">False</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">refresh_input_keys</span> <span class="o">=</span> <span class="n">login_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;refresh_inputs&#39;</span><span class="p">,</span> <span class="p">[])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">login_response_keys</span> <span class="o">=</span> <span class="n">login_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outputs&#39;</span><span class="p">,</span> <span class="p">[])</span>
@@ -191,7 +197,18 @@
                 <span class="n">auth_header</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;Bearer </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">}</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">set_header</span><span class="p">(</span><span class="n">auth_header</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">refresh_input_keys</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">refresh_inputs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span></div>
+                <span class="bp">self</span><span class="o">.</span><span class="n">refresh_inputs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">set_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_CONFIG_FILENAME</span><span class="p">):</span>
+        <span class="n">new_auth</span> <span class="o">=</span> <span class="n">mk_auth</span><span class="p">({},</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_input_keys</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">profile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">new_auth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Could not find authentication credentials for profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s1"> in file </span><span class="si">{</span><span class="n">config</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">new_auth</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_input_keys</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">login_args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_auth</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">or</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">login</span><span class="p">()</span></div>
 </pre></div>
 
           </div>
@@ -213,6 +230,7 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py.html">http2py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/authentication.html">http2py.authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/cli_maker.html">http2py.cli_maker</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/client.html">http2py.client</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/decorators.html">http2py.decorators</a></li>

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>http2py.cli_maker &#8212; http2py 0.1.6 documentation</title>
+    <title>http2py.cli_maker &#8212; http2py 0.1.7 documentation</title>
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
@@ -17,7 +17,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="http2py.client" href="client.html" />
-    <link rel="prev" title="http2py" href="../http2py.html" />
+    <link rel="prev" title="http2py.authentication" href="authentication.html" />
    
   <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
   
@@ -77,7 +77,7 @@ to trailing underscores, to ensure compatibility with argparse</p>
 
 <dl class="py function">
 <dt id="http2py.cli_maker.register_cli_method">
-<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">register_cli_method</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">openapi_spec</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">client_method</span><span class="p">:</span> <span class="n">Callable</span></em>, <em class="sig-param"><span class="n">expected_auth_kwargs</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span>str<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">config_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'/home/runner/.http2py/credentials.json'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#register_cli_method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.register_cli_method" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">register_cli_method</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">openapi_spec</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">client_method</span><span class="p">:</span> <span class="n">Callable</span></em>, <em class="sig-param"><span class="n">expected_auth_kwargs</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span>str<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">config_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'/home/runner/.http2py/credentials.json'</span></em>, <em class="sig-param"><span class="n">profile</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#register_cli_method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.register_cli_method" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
 arguments and call a particular method of the client instance</p>
 <dl class="field-list simple">
@@ -89,6 +89,7 @@ arguments and call a particular method of the client instance</p>
 (defaults to empty list)</p></li>
 <li><p><strong>config_filename</strong> – The path to a JSON file to read for authentication kwargs
 (defaults to ~/.http2py/credentials.json)</p></li>
+<li><p><strong>profile</strong> – The named profile to find in the config file</p></li>
 </ul>
 </dd>
 </dl>
@@ -116,6 +117,7 @@ arguments and call a particular method of the client instance</p>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../http2py.html">http2py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authentication.html">http2py.authentication</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">http2py.cli_maker</a></li>
 <li class="toctree-l1"><a class="reference internal" href="client.html">http2py.client</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decorators.html">http2py.decorators</a></li>
@@ -132,7 +134,7 @@ arguments and call a particular method of the client instance</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../http2py.html" title="previous chapter">http2py</a></li>
+      <li>Previous: <a href="authentication.html" title="previous chapter">http2py.authentication</a></li>
       <li>Next: <a href="client.html" title="next chapter">http2py.client</a></li>
   </ul></li>
 </ul>

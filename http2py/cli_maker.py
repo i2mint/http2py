@@ -14,6 +14,7 @@ from i2.signatures import set_signature_of_func, Sig, KO
 from http2py import HttpClient
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 
+
 def mk_sig_argparse_friendly(sig):
     """Modifies a signature to change all leading underscores in param names
     to trailing underscores, to ensure compatibility with argparse"""
@@ -48,6 +49,7 @@ def mk_argparse_friendly(func):
         # convert strings into correct JSON types
         io_trans = JSONAnnotAndDfltIoTrans()
         return io_trans(func)(*args, **mapped_kwargs)
+
     return new_sig(_func)
 
 
@@ -123,7 +125,7 @@ def register_cli_method(
     client_method: Callable,
     expected_auth_kwargs: Iterable[str] = None,
     config_filename: str = DFLT_CONFIG_FILENAME,
-    profile: str = ''
+    profile: str = '',
 ):
     """Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
     arguments and call a particular method of the client instance
@@ -153,7 +155,9 @@ def register_cli_method(
     def cli_method(*args, **kwargs):
         config_filename = kwargs.pop('config')
         auth_kwargs = {key: kwargs.pop(key) for key in expected_auth_kwargs}
-        auth_kwargs = mk_auth(auth_kwargs, expected_auth_kwargs, config_filename, profile)
+        auth_kwargs = mk_auth(
+            auth_kwargs, expected_auth_kwargs, config_filename, profile
+        )
         http_client = HttpClient(openapi_spec, **auth_kwargs)
         return getattr(http_client, methodname)(**kwargs)
 

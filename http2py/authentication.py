@@ -3,13 +3,17 @@ import os
 from pathlib import Path
 from typing import Iterable
 
-DFLT_CONFIG_FILENAME = os.path.join(Path.home(), '.http2py', 'credentials.json')
+DFLT_CONFIG_FILENAME = os.path.join(
+    Path.home(), '.http2py', 'credentials.json'
+)
 
 
-def mk_auth(auth_kwargs: dict,
-            expected_auth_kwargs: Iterable[str],
-            config_filename=DFLT_CONFIG_FILENAME,
-            profile: str = ''):
+def mk_auth(
+    auth_kwargs: dict,
+    expected_auth_kwargs: Iterable[str],
+    config_filename=DFLT_CONFIG_FILENAME,
+    profile: str = '',
+):
     output = {}
     stored_auth = {}
     for kwarg in expected_auth_kwargs:

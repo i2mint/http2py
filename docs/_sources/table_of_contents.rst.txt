@@ -3,6 +3,7 @@
    :caption: Contents:
 
    module_docs/http2py
+   module_docs/http2py/authentication
    module_docs/http2py/cli_maker
    module_docs/http2py/client
    module_docs/http2py/decorators

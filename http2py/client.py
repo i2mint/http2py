@@ -3,7 +3,10 @@ from requests import request, get, Session
 from i2.errors import AuthorizationError
 
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
-from http2py.py2request import mk_method_spec_from_openapi_method_spec, mk_request_function
+from http2py.py2request import (
+    mk_method_spec_from_openapi_method_spec,
+    mk_request_function,
+)
 from http2py.global_state import get_global_state
 
 
@@ -21,7 +24,9 @@ class HttpClient:
     refresh_input_keys = []
     session = None
 
-    def __init__(self, openapi_spec=None, session_state=None, url=None, **auth_kwargs):
+    def __init__(
+        self, openapi_spec=None, session_state=None, url=None, **auth_kwargs
+    ):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
@@ -162,7 +167,9 @@ class HttpClient:
     def set_profile(self, profile: str, config: str = DFLT_CONFIG_FILENAME):
         new_auth = mk_auth({}, self.login_input_keys, config, profile)
         if not new_auth:
-            raise KeyError(f'Could not find authentication credentials for profile {profile} in file {config}')
+            raise KeyError(
+                f'Could not find authentication credentials for profile {profile} in file {config}'
+            )
         for key in new_auth:
             if key in self.login_input_keys:
                 self.login_args[key] = new_auth[key] or False
