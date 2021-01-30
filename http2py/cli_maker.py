@@ -117,6 +117,7 @@ def register_cli_method(
         (defaults to empty list)
     :param config_filename: The path to a JSON file to read for authentication kwargs
         (defaults to ~/.http2py/credentials.json)
+    :param profile: The named profile to find in the config file
     """
     methodname = client_method.__name__
     method_sig = Sig(client_method)

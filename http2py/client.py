@@ -1,5 +1,5 @@
 from glom import glom
-from requests import request, Session
+from requests import request, get, Session
 from i2.errors import AuthorizationError
 
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
@@ -20,7 +20,7 @@ class HttpClient:
     refresh_input_keys = []
     session = None
 
-    def __init__(self, openapi_spec, session_state=None, **auth_kwargs):
+    def __init__(self, openapi_spec=None, session_state=None, url=None, **auth_kwargs):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
@@ -34,6 +34,8 @@ class HttpClient:
               Input values to be passed to the login url, if using bearer auth
 
         """
+        if url and not openapi_spec:
+            openapi_spec = get(url).json()
         self.openapi_spec = openapi_spec
         server_info = openapi_spec['info']
         self.title = server_info['title']
