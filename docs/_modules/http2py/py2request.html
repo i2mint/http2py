@@ -1,0 +1,895 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>http2py.py2request &#8212; http2py 0.1.6 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for http2py.py2request</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Won&#39;t show the details here, but if you are used to it&#39;s not that hard,</span>
+<span class="sd">you just need to find the definition of the API, read it, figure out what part</span>
+<span class="sd">of the request you need in the URL and what you need to put in the &quot;payload&quot;,</span>
+<span class="sd">figure out how those _inputs_ of the request need to be formated,</span>
+<span class="sd">construct the URL and the payload according to your newly acquired knowledge of this specific API,</span>
+<span class="sd">make a web request (say with `urllib.request` or `requests`),</span>
+<span class="sd">extract the information you need from the response object (often in `.contents` or `.json()`),</span>
+<span class="sd">and often process the data further to get it in the format you can use it directly</span>
+<span class="sd">(say a list, a dict, a dataframe, a numpy array, etc.).</span>
+
+<span class="sd">And if you&#39;re experienced, and have felt the pain of needing to reuse or adapt your code,</span>
+<span class="sd">you&#39;ll clean things up as soon as you figure this puzzle out.</span>
+<span class="sd">You&#39;ll divide your code into separate concerns, encapsulate these concerns in functions and classes,</span>
+<span class="sd">and offer a simple, intuitive, python-like interface that reflects the simplicity</span>
+<span class="sd">of what you&#39;re actually doing: Just getting some data. Something like:</span>
+
+<span class="sd">```</span>
+<span class="sd">nice_python_obj_I_can_use_directly = get_that_darn_data(query, using, my, words, values, and, defaults=&#39;here&#39;)</span>
+<span class="sd">```</span>
+
+<span class="sd">The details being hidden away, as they should.</span>
+
+<span class="sd">And that&#39;s fine. You&#39;ve done well. Congratulate yourself, you deserve it.</span>
+
+<span class="sd">Now do that again and again and again, and sometimes under the pressure of a deadline that depends on this data being acquired.</span>
+
+<span class="sd">Are you enjoying yourself?</span>
+
+<span class="sd">There must be a better way...</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span><span class="p">,</span> <span class="n">Parameter</span>
+<span class="kn">from</span> <span class="nn">glom</span> <span class="kn">import</span> <span class="n">glom</span>
+<span class="kn">from</span> <span class="nn">requests</span> <span class="kn">import</span> <span class="n">request</span>
+<span class="kn">import</span> <span class="nn">string</span>
+
+<span class="c1"># import io</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">http2py.util</span> <span class="kn">import</span> <span class="n">I2mintModuleNotFoundErrorNiceMessage</span><span class="p">,</span> <span class="n">is_jsonable</span>
+<span class="kn">from</span> <span class="nn">http2py.default_configs</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">default_json_output_trans</span><span class="p">,</span>
+    <span class="n">default_text_output_trans</span><span class="p">,</span>
+    <span class="n">default_content_output_trans</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">with</span> <span class="n">I2mintModuleNotFoundErrorNiceMessage</span><span class="p">():</span>
+    <span class="kn">from</span> <span class="nn">i2.util</span> <span class="kn">import</span> <span class="n">inject_method</span><span class="p">,</span> <span class="n">imdict</span>
+    <span class="kn">from</span> <span class="nn">i2.signatures</span> <span class="kn">import</span> <span class="n">set_signature_of_func</span><span class="p">,</span> <span class="n">KO</span>
+
+<span class="n">DFLT_PORT</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">DFLT_BASE_URL</span> <span class="o">=</span> <span class="s1">&#39;http://localhost:</span><span class="si">{port}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">DFLT_PORT</span><span class="p">)</span>
+<span class="n">DFLT_REQUEST_METHOD</span> <span class="o">=</span> <span class="s1">&#39;GET&#39;</span>
+<span class="n">DFLT_REQUEST_KWARGS</span> <span class="o">=</span> <span class="n">imdict</span><span class="p">({</span><span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">DFLT_REQUEST_METHOD</span><span class="p">,</span> <span class="s1">&#39;url&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">})</span>
+
+<span class="n">pytype_for_oatype</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;string&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="s1">&#39;integer&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="s1">&#39;array&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="s1">&#39;object&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="s1">&#39;boolean&#39;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">identity_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+
+<span class="k">class</span> <span class="nc">DebugOptions</span><span class="p">:</span>
+    <span class="n">print_request_kwargs</span> <span class="o">=</span> <span class="s1">&#39;print_request_kwargs&#39;</span>
+    <span class="n">return_request_kwargs</span> <span class="o">=</span> <span class="s1">&#39;return_request_kwargs&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">mk_default_completion_validator</span><span class="p">(</span><span class="n">dflt_kwargs</span><span class="o">=</span><span class="n">DFLT_REQUEST_KWARGS</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">default_completion_validator</span><span class="p">(</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dflt_kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">default_completion_validator</span>
+
+
+<span class="k">def</span> <span class="nf">all_necessary_fields_validator</span><span class="p">(</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="s1">&#39;method&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="s1">&#39;url&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span>
+    <span class="p">),</span> <span class="s1">&#39;Need both a method and a url field!&#39;</span>
+    <span class="k">return</span> <span class="n">kwargs</span>
+
+
+<span class="k">def</span> <span class="nf">_ensure_list</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+
+<span class="k">def</span> <span class="nf">mk_param_spec_from_arg_schema</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">spec_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">arg</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="s1">&#39;default&#39;</span> <span class="ow">in</span> <span class="n">arg</span><span class="p">:</span>
+        <span class="n">spec_dict</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">arg</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">arg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;required&#39;</span><span class="p">,</span> <span class="n">required</span><span class="p">):</span>
+        <span class="n">spec_dict</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">spec_dict</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">empty</span>
+    <span class="k">if</span> <span class="s1">&#39;type&#39;</span> <span class="ow">in</span> <span class="n">arg</span><span class="p">:</span>
+        <span class="n">spec_dict</span><span class="p">[</span><span class="s1">&#39;annotation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">arg</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s1">&#39;kind&#39;</span> <span class="ow">in</span> <span class="n">arg</span><span class="p">:</span>
+        <span class="n">spec_dict</span><span class="p">[</span><span class="s1">&#39;kind&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">arg</span><span class="p">[</span><span class="s1">&#39;kind&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">spec_dict</span><span class="p">[</span><span class="s1">&#39;kind&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">KO</span>
+    <span class="k">return</span> <span class="n">spec_dict</span>
+
+
+<div class="viewcode-block" id="mk_request_function"><a class="viewcode-back" href="../../module_docs/http2py/py2request.html#http2py.py2request.mk_request_function">[docs]</a><span class="k">def</span> <span class="nf">mk_request_function</span><span class="p">(</span>
+    <span class="n">method_spec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">function_kind</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">dispatch</span><span class="o">=</span><span class="n">request</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Makes function that will make http requests for you, on your own terms.</span>
+
+<span class="sd">    Specify what API you want to talk to, and how you want to talk to it (and it talk back to you), and</span>
+<span class="sd">    get a function that does exactly that.</span>
+
+<span class="sd">    Essentially, this factory function allows you to take an API specification, specify how you want it to</span>
+<span class="sd">    relate to python objects (how to convert input arguments to API elements, and how to convert the response of</span>
+<span class="sd">    the request, for instance), and get a method that is ready to be used.</span>
+
+<span class="sd">    What does a method_spec contain?</span>
+<span class="sd">    Well... consider first this. The core of this code is this:</span>
+<span class="sd">    ```</span>
+<span class="sd">        request_kwargs = dict(**method_spec[&#39;request_kwargs&#39;])  # to make a copy</span>
+<span class="sd">        ...  # a bunch more code that updates request_kwargs according to other keys of method_spec</span>
+<span class="sd">        ...  # ... and some other debugging hooks</span>
+<span class="sd">        r = request(**request_kwargs)  # call the request</span>
+<span class="sd">        if &#39;output_trans&#39; in method_spec:  # see if there&#39;s an output_trans function</span>
+<span class="sd">            r = method_spec[&#39;output_trans&#39;](r)  # ... if so, use it to extract what you want from the response</span>
+<span class="sd">        return r</span>
+<span class="sd">    ```</span>
+<span class="sd">    So you can do almost everything you need with one single key: `&#39;request_kwargs&#39;` and `&#39;output_trans&#39;` alone.</span>
+<span class="sd">    But there wouldn&#39;t be as much advantage over just calling requests if that&#39;s all there was to it,</span>
+<span class="sd">    so we offer some other special keys to cover some of the common patterns.</span>
+<span class="sd">        - &#39;method&#39;:</span>
+<span class="sd">        - &#39;url_template&#39;: Specify the url, but with named placeholders: Example `&#39;http://base.com/{user}/{action}&#39;`.</span>
+<span class="sd">        - &#39;json_arg_names&#39;: Specify the names of arguments of the function that should be put in the json load</span>
+<span class="sd">        - &#39;debug&#39;: &#39;print_request_kwargs&#39; or &#39;return_request_kwargs&#39;</span>
+<span class="sd">        - &#39;input_trans&#39;: Function applied to</span>
+<span class="sd">        - &#39;output_trans&#39;: A function applied to response object to extract what we want to return.</span>
+<span class="sd">        - &#39;wraps&#39;: A function whose signature we should use as the output&#39;s function&#39;s signature</span>
+
+<span class="sd">    :param method_spec: Specification of how to convert arguments of the function that is being made to an http request.</span>
+<span class="sd">    :return: A function.</span>
+<span class="sd">        Note: I say &quot;function&quot;, but the function is meant to be a method, so the function has a self as first argument.</span>
+<span class="sd">        That argument is ignored.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">original_spec</span> <span class="o">=</span> <span class="n">method_spec</span>
+    <span class="n">method_spec</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># make a copy</span>
+    <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;input_trans&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;input_trans&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="n">request_kwargs</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;request_kwargs&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span>
+        <span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">request_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">DFLT_REQUEST_METHOD</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">path_arg_names</span> <span class="o">=</span> <span class="n">_ensure_list</span><span class="p">(</span><span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path_arg_names&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="n">query_arg_names</span> <span class="o">=</span> <span class="n">_ensure_list</span><span class="p">(</span><span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;query_arg_names&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="n">body_arg_names</span> <span class="o">=</span> <span class="n">_ensure_list</span><span class="p">(</span><span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;body_arg_names&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="n">arg_specs</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;arg_specs&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">formatted_arg_specs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">mk_param_spec_from_arg_schema</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">arg_specs</span>
+    <span class="p">]</span>
+    <span class="n">func_args</span> <span class="o">=</span> <span class="n">path_arg_names</span> <span class="o">+</span> <span class="n">query_arg_names</span> <span class="o">+</span> <span class="n">body_arg_names</span>
+
+    <span class="n">debug</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;debug&#39;</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="p">:</span>
+        <span class="n">debug</span> <span class="o">=</span> <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;debug&#39;</span><span class="p">]</span>
+
+    <span class="n">output_trans</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;output_trans&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">output_trans</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">response_type</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;response_type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response_type</span> <span class="o">==</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">:</span>
+            <span class="n">output_trans</span> <span class="o">=</span> <span class="n">default_text_output_trans</span>
+        <span class="k">if</span> <span class="n">response_type</span> <span class="o">==</span> <span class="s1">&#39;application/json&#39;</span><span class="p">:</span>
+            <span class="n">output_trans</span> <span class="o">=</span> <span class="n">default_json_output_trans</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output_trans</span> <span class="o">=</span> <span class="n">default_content_output_trans</span>
+
+    <span class="n">wraps_func</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wraps&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># TODO: inject a signature, and possibly a __doc__ in this function</span>
+    <span class="k">def</span> <span class="nf">request_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">get_req_param_key</span><span class="p">():</span>
+            <span class="n">content_type</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content_type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">content_type</span> <span class="o">==</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">&#39;data&#39;</span>
+            <span class="k">if</span> <span class="n">content_type</span> <span class="o">==</span> <span class="s1">&#39;multipart/form-data&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">&#39;files&#39;</span>
+            <span class="k">if</span> <span class="n">content_type</span> <span class="o">==</span> <span class="s1">&#39;application/octet-stream&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">&#39;stream&#39;</span>
+
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">kwargs</span><span class="p">,</span>
+            <span class="o">**</span><span class="p">{</span><span class="n">argname</span><span class="p">:</span> <span class="n">argval</span> <span class="k">for</span> <span class="n">argname</span><span class="p">,</span> <span class="n">argval</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">func_args</span><span class="p">,</span> <span class="n">args</span><span class="p">)},</span>
+        <span class="p">)</span>
+
+        <span class="c1"># convert argument types TODO: Not efficient. Might could be revised.</span>
+        <span class="k">for</span> <span class="n">arg_name</span><span class="p">,</span> <span class="n">converter</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;input_trans&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">arg_name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="n">arg_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">converter</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="n">arg_name</span><span class="p">])</span>
+
+        <span class="c1"># making the request_kwargs ####################################################################################</span>
+        <span class="n">_request_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="o">**</span><span class="n">request_kwargs</span><span class="p">)</span>  <span class="c1"># to make a copy</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s1">&#39;url_template&#39;</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="p">:</span>
+            <span class="n">url_template</span> <span class="o">=</span> <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;url_template&#39;</span><span class="p">]</span>
+            <span class="c1"># Check if the url template already have parameters, add them otherwise</span>
+            <span class="k">if</span> <span class="n">query_arg_names</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+                <span class="s1">&#39;^.*\?((.*=.*)(&amp;?))+$&#39;</span><span class="p">,</span> <span class="n">url_template</span>
+            <span class="p">):</span>
+                <span class="n">url_arg_parts</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">=</span><span class="se">{{</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="se">}}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">query_arg_names</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">kwargs</span>
+                <span class="p">]</span>
+                <span class="n">url_args</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">url_arg_parts</span><span class="p">)</span>
+                <span class="n">url_template</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;?</span><span class="si">{</span><span class="n">url_args</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">url_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s1">&#39;url&#39;</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span>
+
+        <span class="n">json</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">is_jsonable</span><span class="p">(</span><span class="n">v</span><span class="p">)}</span>
+        <span class="n">_request_kwargs</span><span class="p">[</span><span class="s1">&#39;json&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span>
+        <span class="n">remaining_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">json</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">remaining_kwargs</span><span class="p">:</span>
+            <span class="n">req_param_key</span> <span class="o">=</span> <span class="n">get_req_param_key</span><span class="p">()</span>
+            <span class="n">_request_kwargs</span><span class="p">[</span><span class="n">req_param_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">remaining_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">body_arg_names</span>
+            <span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">debug</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">debug</span> <span class="o">==</span> <span class="s1">&#39;print_request_kwargs&#39;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">_request_kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">debug</span> <span class="o">==</span> <span class="s1">&#39;return_request_kwargs&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">_request_kwargs</span>
+
+        <span class="n">r</span> <span class="o">=</span> <span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="o">**</span><span class="n">_request_kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">output_trans</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">output_trans</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="k">if</span> <span class="n">function_kind</span> <span class="o">==</span> <span class="s1">&#39;method&#39;</span><span class="p">:</span>
+        <span class="n">_request_func</span> <span class="o">=</span> <span class="n">request_func</span>
+
+        <span class="k">def</span> <span class="nf">request_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">_request_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">wraps_func</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">wraps</span><span class="p">(</span><span class="n">wraps_func</span><span class="p">)(</span><span class="n">request_func</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">formatted_arg_specs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">function_kind</span> <span class="o">==</span> <span class="s1">&#39;method&#39;</span><span class="p">:</span>
+                <span class="n">set_signature_of_func</span><span class="p">(</span>
+                    <span class="n">request_func</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;self&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">formatted_arg_specs</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">function_kind</span> <span class="o">==</span> <span class="s1">&#39;function&#39;</span><span class="p">:</span>
+                <span class="n">set_signature_of_func</span><span class="p">(</span><span class="n">request_func</span><span class="p">,</span> <span class="n">formatted_arg_specs</span><span class="p">)</span>
+
+    <span class="n">request_func</span><span class="o">.</span><span class="n">original_spec</span> <span class="o">=</span> <span class="n">original_spec</span>
+    <span class="n">request_func</span><span class="o">.</span><span class="n">func_args</span> <span class="o">=</span> <span class="n">func_args</span>
+    <span class="n">request_func</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="n">debug</span>
+    <span class="n">request_func</span><span class="o">.</span><span class="n">method_spec</span> <span class="o">=</span> <span class="n">method_spec</span>
+    <span class="n">funcname</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;method_name&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">funcname</span><span class="p">:</span>
+        <span class="n">request_func</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">funcname</span>
+    <span class="n">docstring</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;docstring&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">docstring</span><span class="p">:</span>
+        <span class="n">request_func</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">docstring</span>
+
+    <span class="k">assert</span> <span class="n">callable</span><span class="p">(</span>
+        <span class="n">output_trans</span>
+    <span class="p">),</span> <span class="sa">f</span><span class="s1">&#39;output_trans </span><span class="si">{</span><span class="n">output_trans</span><span class="si">}</span><span class="s1"> is not callable, try again&#39;</span>
+    <span class="k">return</span> <span class="n">request_func</span></div>
+
+
+<span class="n">DFLT_METHOD_FUNC_FROM_METHOD_SPEC</span> <span class="o">=</span> <span class="n">mk_request_function</span>
+
+<span class="n">str_formatter</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">Formatter</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Py2Request"><a class="viewcode-back" href="../../module_docs/http2py/py2request.html#http2py.py2request.Py2Request">[docs]</a><span class="k">class</span> <span class="nc">Py2Request</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Make a class that has methods that offer a python interface to web requests &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">method_specs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">method_func_from_method_spec</span><span class="o">=</span><span class="n">DFLT_METHOD_FUNC_FROM_METHOD_SPEC</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the object with web request calling methods.</span>
+<span class="sd">        You can also just make an empty Py2Request object, and inject methods later on, one by one.</span>
+
+
+<span class="sd">        :param method_specs:  A {method_name: method_spec,...} dict that specifies</span>
+<span class="sd">            what methods to create (the method_name part) and what that method should do (the method_spec part).</span>
+<span class="sd">            Notice that there&#39;s no restriction on method_specs, but by default (becauise</span>
+<span class="sd">        :param method_func_from_method_spec: The function that makes an actual method (function, which will be bounded)</span>
+<span class="sd">            from the method_specs</span>
+
+<span class="sd">        Notice that there&#39;s no restriction on the method_spec (singular) values of the method_specs dict.</span>
+<span class="sd">        Indeed, it could be any object that is understood by the method_func_from_method_spec function, that</span>
+<span class="sd">        would result in a function that can be &quot;injected&quot; as a method of Py2Request.</span>
+
+<span class="sd">        In a sense, `method_func_from_method_spec` is your compiler, and the values of `method_specs` are the</span>
+<span class="sd">        data/code you give to that compiler make produce a function for you.</span>
+
+<span class="sd">        See `mk_request_function` function. Either to see what should be in the `method_specs` dict,</span>
+<span class="sd">        or to find inspiration on how you could write your own `method_func_from_method_spec`.</span>
+
+<span class="sd">        &gt;&gt;&gt; import re</span>
+<span class="sd">        &gt;&gt;&gt; from collections import Counter</span>
+<span class="sd">        &gt;&gt;&gt; from functools import lru_cache</span>
+<span class="sd">        &gt;&gt;&gt; # Defining the functions we&#39;ll use</span>
+<span class="sd">        &gt;&gt;&gt; def print_content(r):</span>
+<span class="sd">        ...     print(r.text)</span>
+<span class="sd">        &gt;&gt;&gt; def dict_of_json(r):</span>
+<span class="sd">        ...     return json.loads(r.content)</span>
+<span class="sd">        &gt;&gt;&gt; tokenizer = re.compile(&#39;\w+&#39;).findall</span>
+<span class="sd">        &gt;&gt;&gt; # Defining the specs</span>
+<span class="sd">        &gt;&gt;&gt; method_specs = {</span>
+<span class="sd">        ...     &#39;google_google&#39;: {</span>
+<span class="sd">        ...         &#39;request_kwargs&#39;: {</span>
+<span class="sd">        ...             &#39;url&#39;: &#39;https://www.google.com/search?q=google&#39;</span>
+<span class="sd">        ...         }</span>
+<span class="sd">        ...     },</span>
+<span class="sd">        ...     &#39;search_google&#39;: {</span>
+<span class="sd">        ...         &#39;url_template&#39;: &#39;https://www.google.com/search?q={search_term}&#39;,</span>
+<span class="sd">        ...         &#39;query_arg_names&#39;: [&#39;search_term&#39;],  # only needed if you want to use unnamed arguments in your method</span>
+<span class="sd">        ...         &#39;output_trans&#39;: lambda r: r.text,</span>
+<span class="sd">        ...     },</span>
+<span class="sd">        ...     &#39;search_google_and_count_tokens&#39;: {</span>
+<span class="sd">        ...         &#39;url_template&#39;: &#39;https://www.google.com/search?q={search_term}&#39;,</span>
+<span class="sd">        ...         &#39;output_trans&#39;: lambda r: Counter(tokenizer(r.text)).most_common()</span>
+<span class="sd">        ...     },</span>
+<span class="sd">        ...     &#39;my_ip&#39;: {</span>
+<span class="sd">        ...         &#39;url_template&#39;: &#39;https://api.ipify.org?format=json&#39;,</span>
+<span class="sd">        ...         &#39;output_trans&#39;: dict_of_json,</span>
+<span class="sd">        ...         &#39;method_wrap&#39;: lru_cache()</span>
+<span class="sd">        ...     },</span>
+<span class="sd">        ...     &#39;print_ip_location&#39;: {</span>
+<span class="sd">        ...         &#39;url_template&#39;: &#39;http://ip-api.com/#{ip_address}&#39;,</span>
+<span class="sd">        ...         &#39;output_trans&#39;: print_content</span>
+<span class="sd">        ...     },</span>
+<span class="sd">        ... }</span>
+<span class="sd">        &gt;&gt;&gt; pr = Py2Request(method_specs=method_specs)</span>
+<span class="sd">        &gt;&gt;&gt; html = pr.search_google(&#39;convention over configuration&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; html[:14].lower()</span>
+<span class="sd">        &#39;&lt;!doctype html&#39;</span>
+<span class="sd">        &gt;&gt;&gt; # And I&#39;ll let the reader try the other requests, whose results are not stable enough to test like this</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_method_specs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">method_specs</span> <span class="ow">or</span> <span class="p">{},</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dflt_method_func_from_method_spec</span> <span class="o">=</span> <span class="n">method_func_from_method_spec</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_process_method_specs</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_method_specs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_inject_method</span><span class="p">(</span>
+                <span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span><span class="p">,</span> <span class="n">method_func_from_method_spec</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_process_method_specs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dflt_method_func_from_method_spec</span> <span class="o">==</span> <span class="n">mk_request_function</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_method_specs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="s1">&#39;args&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">method_spec</span> <span class="ow">and</span> <span class="s1">&#39;url_template&#39;</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="p">:</span>
+                    <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;args&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                        <span class="nb">filter</span><span class="p">(</span>
+                            <span class="nb">bool</span><span class="p">,</span>
+                            <span class="p">(</span>
+                                <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">str_formatter</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+                                    <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;url_template&#39;</span><span class="p">]</span>
+                                <span class="p">)</span>
+                            <span class="p">),</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_inject_method</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span><span class="p">,</span> <span class="n">method_func_from_method_spec</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">method_wrap</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">method_spec</span><span class="p">):</span>
+            <span class="n">method_spec</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="o">**</span><span class="n">method_spec</span><span class="p">)</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">method_spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;args&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">method_wrap</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;method_wrap&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">method_func_from_method_spec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">method_func_from_method_spec</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_dflt_method_func_from_method_spec</span>
+                <span class="p">)</span>
+            <span class="n">method_spec</span> <span class="o">=</span> <span class="n">method_func_from_method_spec</span><span class="p">(</span><span class="n">method_spec</span><span class="p">)</span>
+        <span class="n">inject_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_spec</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">method_wrap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">method_wrap</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)))</span></div>
+
+
+<div class="viewcode-block" id="UrlMethodSpecsMaker"><a class="viewcode-back" href="../../module_docs/http2py/py2request.html#http2py.py2request.UrlMethodSpecsMaker">[docs]</a><span class="k">class</span> <span class="nc">UrlMethodSpecsMaker</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Utility to help in making templated method_specs dicts to be used to define a Py2Request object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url_root</span><span class="p">,</span> <span class="n">constant_url_query</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">constant_items</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Make a method_spec factory.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            url_root: The absolute prefix of all &#39;url_template&#39; keys</span>
+<span class="sd">            constant_url_query: The dict specifying the query part of the url_template that should appear in</span>
+<span class="sd">                all url_templates (used for example, to specify api keys)</span>
+<span class="sd">            **constant_items: Other dict entries that should be systematically created</span>
+
+<span class="sd">        Intention pasted below, but commenting out because some errors:</span>
+
+<span class="sd">        # &gt;&gt;&gt; mk_specs = UrlMethodSpecsMaker(</span>
+<span class="sd">        # ...     url_root=&#39;http://myapi.com&#39;,</span>
+<span class="sd">        # ...     constant_url_query={&#39;apikey&#39;: &#39;SECRET&#39;, &#39;fav&#39;: 42},</span>
+<span class="sd">        # ...     output_trans=lambda response: response.json())</span>
+<span class="sd">        # &gt;&gt;&gt;</span>
+<span class="sd">        # &gt;&gt;&gt; s = mk_specs(route=&#39;/search&#39;, url_queries={&#39;q&#39;: &#39;search_term&#39;, &#39;limit&#39;: &#39;n&#39;})</span>
+<span class="sd">        # &gt;&gt;&gt; assert list(s.keys()) == [&#39;url_template&#39;, &#39;args&#39;, &#39;output_trans&#39;]</span>
+<span class="sd">        # &gt;&gt;&gt; s[&#39;url_template&#39;]</span>
+<span class="sd">        # &#39;http://myapi.com/search?apikey=SECRET&amp;fav=42&amp;q={search_term}&amp;limit={n}&#39;</span>
+<span class="sd">        # &gt;&gt;&gt; s[&#39;args&#39;]</span>
+<span class="sd">        # [&#39;search_term&#39;, &#39;n&#39;]</span>
+<span class="sd">        # &gt;&gt;&gt;</span>
+<span class="sd">        # &gt;&gt;&gt; s = mk_specs(route=&#39;/actions/poke&#39;, url_queries=&#39;user&#39;)</span>
+<span class="sd">        # &gt;&gt;&gt; s[&#39;url_template&#39;]</span>
+<span class="sd">        # &#39;http://myapi.com/actions/poke?apikey=SECRET&amp;fav=42&amp;user={user}&#39;</span>
+<span class="sd">        # &gt;&gt;&gt; s[&#39;args&#39;]</span>
+<span class="sd">        # [&#39;user&#39;]</span>
+<span class="sd">        # &gt;&gt;&gt;</span>
+<span class="sd">        # &gt;&gt;&gt; s = mk_specs(&#39;/actions/msg&#39;, [&#39;user&#39;, &#39;msg&#39;])</span>
+<span class="sd">        # &gt;&gt;&gt; s[&#39;url_template&#39;]</span>
+<span class="sd">        # &#39;http://myapi.com/actions/msg?apikey=SECRET&amp;fav=42&amp;user={user}&amp;msg={msg}&#39;</span>
+<span class="sd">        # &gt;&gt;&gt; s[&#39;args&#39;]</span>
+<span class="sd">        # [&#39;user&#39;, &#39;msg&#39;]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">url_root</span> <span class="o">=</span> <span class="n">url_root</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant_url_query</span> <span class="o">=</span> <span class="n">constant_url_query</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="c1"># if constant_url_query is None:</span>
+        <span class="c1">#     self.constant_url_suffix = &#39;&#39;</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     self.constant_url_suffix = &#39;?&#39; + &#39;&amp;&#39;.join(</span>
+        <span class="c1">#         map(lambda kv: f&#39;{kv[0]}={kv[1]}&#39;, constant_url_query.items()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant_items</span> <span class="o">=</span> <span class="n">constant_items</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">route</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">url_queries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">more_url_queries</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">url_template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">url_root</span> <span class="o">+</span> <span class="n">route</span>
+        <span class="k">if</span> <span class="n">url_queries</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;url_template&#39;</span><span class="p">:</span> <span class="n">url_template</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">url_queries</span> <span class="o">=</span> <span class="p">{</span><span class="n">url_queries</span><span class="p">:</span> <span class="n">url_queries</span><span class="p">}</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
+                <span class="n">url_queries</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">url_queries</span><span class="p">}</span>
+            <span class="c1"># assert the general case where url query (key) and arg (val) names are different</span>
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="n">url_queries</span><span class="p">,</span> <span class="nb">dict</span>
+            <span class="p">),</span> <span class="s1">&#39;url_queries should be a dict&#39;</span>
+            <span class="n">url_queries</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constant_url_query</span><span class="p">,</span>
+                <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="o">**</span><span class="n">more_url_queries</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">url_template</span> <span class="o">+=</span> <span class="s1">&#39;?&#39;</span> <span class="o">+</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">kv</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">kv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">=</span><span class="se">{{</span><span class="si">{</span><span class="n">kv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="se">}}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">url_queries</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="p">)</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;url_template&#39;</span><span class="p">:</span> <span class="n">url_template</span><span class="p">,</span>
+                <span class="s1">&#39;args&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">url_queries</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">constant_items</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="raw_response_on_error"><a class="viewcode-back" href="../../module_docs/http2py/py2request.html#http2py.py2request.raw_response_on_error">[docs]</a><span class="k">def</span> <span class="nf">raw_response_on_error</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A useful output trans decorator that will return the raw response if the output_trans raises</span>
+<span class="sd">    an error.</span>
+<span class="sd">    The response object will also contain the error that was raised,</span>
+<span class="sd">    in the response.output_trans_error attribute.&quot;&quot;&quot;</span>
+
+    <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_func</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">output_trans_error</span> <span class="o">=</span> <span class="n">e</span>
+            <span class="k">return</span> <span class="n">response</span>
+
+    <span class="k">return</span> <span class="n">_func</span></div>
+
+
+<span class="k">def</span> <span class="nf">mk_method_spec_from_openapi_method_spec</span><span class="p">(</span>
+    <span class="n">openapi_method_spec</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="n">url_template</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;application/json&#39;</span><span class="p">,</span>
+    <span class="n">input_trans</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_trans</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">path_arg_names</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">query_arg_names</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">body_arg_names</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">arg_specs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="s1">&#39;parameters&#39;</span> <span class="ow">in</span> <span class="n">openapi_method_spec</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">openapi_method_spec</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">argname</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+            <span class="n">argtype</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;schema&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+            <span class="n">arg_spec</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">argname</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">pytype_for_oatype</span><span class="p">[</span><span class="n">argtype</span><span class="p">]}</span>
+            <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;path&#39;</span><span class="p">:</span>
+                <span class="n">arg_spec</span><span class="p">[</span><span class="s1">&#39;required&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">path_arg_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">argname</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;required&#39;</span><span class="p">):</span>
+                    <span class="n">arg_spec</span><span class="p">[</span><span class="s1">&#39;required&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="s1">&#39;default&#39;</span> <span class="ow">in</span> <span class="n">param</span><span class="p">:</span>
+                    <span class="n">arg_spec</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span>
+                <span class="n">query_arg_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">argname</span><span class="p">)</span>
+            <span class="n">arg_specs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg_spec</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;requestBody&#39;</span> <span class="ow">in</span> <span class="n">openapi_method_spec</span><span class="p">:</span>
+        <span class="n">body_properties</span> <span class="o">=</span> <span class="n">glom</span><span class="p">(</span>
+            <span class="n">openapi_method_spec</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;requestBody.content.</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s1">.schema.properties&#39;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="p">{},</span>
+        <span class="p">)</span>
+        <span class="n">required_properties</span> <span class="o">=</span> <span class="n">glom</span><span class="p">(</span>
+            <span class="n">openapi_method_spec</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;requestBody.content.</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s1">.schema.required&#39;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="p">[],</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">argname</span><span class="p">,</span> <span class="n">details</span> <span class="ow">in</span> <span class="n">body_properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">body_arg_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">argname</span><span class="p">)</span>
+            <span class="n">argtype</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+            <span class="c1"># TODO: fully support typed dict and typed iterable types</span>
+            <span class="n">arg_spec</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">argname</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">pytype_for_oatype</span><span class="p">[</span><span class="n">argtype</span><span class="p">]}</span>
+            <span class="k">if</span> <span class="s1">&#39;default&#39;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+                <span class="n">arg_spec</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">argname</span> <span class="ow">in</span> <span class="n">required_properties</span><span class="p">:</span>
+                <span class="n">arg_spec</span><span class="p">[</span><span class="s1">&#39;required&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">arg_specs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arg_spec</span><span class="p">)</span>
+
+    <span class="n">method_spec</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+        <span class="n">url_template</span><span class="o">=</span><span class="n">url_template</span><span class="p">,</span>
+        <span class="n">input_trans</span><span class="o">=</span><span class="n">input_trans</span><span class="p">,</span>
+        <span class="n">output_trans</span><span class="o">=</span><span class="n">output_trans</span><span class="p">,</span>
+        <span class="n">path_arg_names</span><span class="o">=</span><span class="n">path_arg_names</span><span class="p">,</span>
+        <span class="n">query_arg_names</span><span class="o">=</span><span class="n">query_arg_names</span><span class="p">,</span>
+        <span class="n">body_arg_names</span><span class="o">=</span><span class="n">body_arg_names</span><span class="p">,</span>
+        <span class="n">method_name</span><span class="o">=</span><span class="n">openapi_method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;x-method_name&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="n">docstring</span><span class="o">=</span><span class="n">openapi_method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="n">content_type</span><span class="o">=</span><span class="n">content_type</span><span class="p">,</span>
+        <span class="n">response_type</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span>
+            <span class="nb">iter</span><span class="p">(</span><span class="n">glom</span><span class="p">(</span><span class="n">openapi_method_spec</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;responses.200.content&#39;</span><span class="p">))</span>
+        <span class="p">),</span>
+        <span class="n">arg_specs</span><span class="o">=</span><span class="n">arg_specs</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">method_spec</span>
+
+
+<span class="c1">##### Open api stuff TODO: To move ###########################################</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">Signature</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Mapping</span> <span class="k">as</span> <span class="n">MappingType</span>
+
+<span class="n">PK</span> <span class="o">=</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">POSITIONAL_OR_KEYWORD</span>
+
+<span class="n">ParamsType</span> <span class="o">=</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Parameter</span><span class="p">]</span>
+<span class="n">ParamsAble</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">ParamsType</span><span class="p">,</span> <span class="n">MappingType</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">],</span> <span class="n">Callable</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_params_from_props</span><span class="p">(</span><span class="n">openapi_props</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">openapi_props</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">yield</span> <span class="n">Parameter</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">kind</span><span class="o">=</span><span class="n">PK</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;default&#39;</span><span class="p">,</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">empty</span><span class="p">),</span>
+            <span class="n">annotation</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="n">Parameter</span><span class="o">.</span><span class="n">empty</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">add_annots_from_openapi_props</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">openapi_props</span><span class="p">):</span>
+    <span class="n">func</span><span class="o">.</span><span class="n">__signature__</span> <span class="o">=</span> <span class="n">Signature</span><span class="p">(</span><span class="n">_params_from_props</span><span class="p">(</span><span class="n">openapi_props</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">func</span>
+
+
+<span class="c1"># def get_props_for_func(func, openapi_spec):</span>
+<span class="c1">#     path = func_to_path(func)</span>
+<span class="c1">#     t = openapi_spec[&quot;paths&quot;][func_to_path(func)]</span>
+<span class="c1">#     t = t.get(&#39;post&#39;, t.get(&#39;get&#39;, None))  # make more robust</span>
+<span class="c1">#     assert t is not None</span>
+<span class="c1">#     # TODO: glommify</span>
+<span class="c1">#     return t[&#39;requestBody&#39;][&#39;content&#39;][&#39;application/json&#39;][&#39;schema&#39;][&#39;properties&#39;]</span>
+
+
+<span class="k">def</span> <span class="nf">_get_path_spec</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">openapi_spec</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">][</span><span class="n">path</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">mk_request_func_from_openapi_spec</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">,</span>
+    <span class="n">openapi_spec</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;application/json&#39;</span><span class="p">,</span>
+    <span class="n">input_trans</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_trans</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">base_url</span> <span class="o">=</span> <span class="n">openapi_spec</span><span class="p">[</span><span class="s1">&#39;servers&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;url&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">base_url</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
+        <span class="n">base_url</span> <span class="o">=</span> <span class="n">base_url</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># TODO: need a urljoin instead of this hack!</span>
+    <span class="n">path_spec</span> <span class="o">=</span> <span class="n">_get_path_spec</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">base_url</span> <span class="o">+</span> <span class="n">path</span>  <span class="c1"># TODO: url join</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">method</span> <span class="ow">or</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">path_spec</span><span class="p">))</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">path_spec</span><span class="p">[</span><span class="n">method</span><span class="p">]</span>
+    <span class="n">method_spec</span> <span class="o">=</span> <span class="n">mk_method_spec_from_openapi_method_spec</span><span class="p">(</span>
+        <span class="n">spec</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+        <span class="n">url_template</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+        <span class="n">content_type</span><span class="o">=</span><span class="n">content_type</span><span class="p">,</span>
+        <span class="n">input_trans</span><span class="o">=</span><span class="n">input_trans</span><span class="p">,</span>
+        <span class="n">output_trans</span><span class="o">=</span><span class="n">output_trans</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">func</span> <span class="o">=</span> <span class="n">mk_request_function</span><span class="p">(</span><span class="n">method_spec</span><span class="p">,</span> <span class="n">function_kind</span><span class="o">=</span><span class="s1">&#39;function&#39;</span><span class="p">)</span>
+    <span class="n">openapi_props</span> <span class="o">=</span> <span class="n">glom</span><span class="p">(</span>
+        <span class="n">spec</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;requestBody.content.</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s1">.schema.properties&#39;</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">func_name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>  <span class="c1"># fragile way of getting the name</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">func_name</span> <span class="o">=</span> <span class="s1">&#39;request_func&#39;</span>
+
+    <span class="k">if</span> <span class="s1">&#39;x-func&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+        <span class="n">original_func</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;x-func&#39;</span><span class="p">]</span>
+        <span class="n">func</span><span class="o">.</span><span class="n">__signature__</span> <span class="o">=</span> <span class="n">signature</span><span class="p">(</span><span class="n">original_func</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">add_annots_from_openapi_props</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">openapi_props</span><span class="p">)</span>
+    <span class="n">func</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+    <span class="n">func</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+    <span class="n">func</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="n">content_type</span>
+    <span class="n">func</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">func_name</span>
+    <span class="n">func</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="o">=</span> <span class="n">func_name</span>
+    <span class="k">return</span> <span class="n">func</span>
+
+
+<span class="n">mk_request_function</span><span class="o">.</span><span class="n">from_openapi_spec</span> <span class="o">=</span> <span class="n">mk_request_func_from_openapi_spec</span>
+
+<span class="c1"># def mk_request_method(method_spec):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Makes function that will make http requests for you, on your own terms.</span>
+<span class="c1">#</span>
+<span class="c1">#     Specify what API you want to talk to, and how you want to talk to it (and it talk back to you), and</span>
+<span class="c1">#     get a function that does exactly that.</span>
+<span class="c1">#</span>
+<span class="c1">#     Essentially, this factory function allows you to take an API specification, specify how you want it to</span>
+<span class="c1">#     relate to python objects (how to convert input arguments to API elements, and how to convert the response of</span>
+<span class="c1">#     the request, for instance), and get a method that is ready to be used.</span>
+<span class="c1">#</span>
+<span class="c1">#     :param method_spec: Specification of how to convert arguments of the function that is being made to an http request.</span>
+<span class="c1">#     :return: A function.</span>
+<span class="c1">#         Note: I say &quot;function&quot;, but the function is meant to be a method, so the function has a self as first argument.</span>
+<span class="c1">#         That argument is ignored.</span>
+<span class="c1">#</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     # defaults</span>
+<span class="c1">#     method_spec = method_spec.copy()</span>
+<span class="c1">#     method_spec[&#39;request_kwargs&#39;] = method_spec.get(&#39;request_kwargs&#39;, {})</span>
+<span class="c1">#     method_spec[&#39;request_kwargs&#39;][&#39;method&#39;] = method_spec[&#39;request_kwargs&#39;].get(&#39;method&#39;, &#39;GET&#39;)</span>
+<span class="c1">#     arg_order = _ensure_list(method_spec.get(&#39;args&#39;, []))</span>
+<span class="c1">#</span>
+<span class="c1">#     # TODO: inject a signature, and possibly a __doc__ in this function</span>
+<span class="c1">#     def request_method(self, *args, **kwargs):</span>
+<span class="c1">#</span>
+<span class="c1">#         # absorb args in kwargs</span>
+<span class="c1">#         if len(args) &gt; len(arg_order):</span>
+<span class="c1">#             raise ValueError(</span>
+<span class="c1">#                 f&quot;The number ({len(args)}) of unnamed arguments was greater than &quot;</span>
+<span class="c1">#                 f&quot;the number ({len(arg_order)}) of specified arguments in arg_order&quot;)</span>
+<span class="c1">#</span>
+<span class="c1">#         kwargs = dict(kwargs, **{argname: argval for argname, argval in zip(arg_order, args)})</span>
+<span class="c1">#</span>
+<span class="c1">#         # convert argument types TODO: Not efficient. Might could be revised.</span>
+<span class="c1">#         for arg_name, converter in method_spec.get(&#39;input_trans&#39;, {}).items():</span>
+<span class="c1">#             if arg_name in kwargs:</span>
+<span class="c1">#                 kwargs[arg_name] = converter(kwargs[arg_name])</span>
+<span class="c1">#</span>
+<span class="c1">#         json_data = {}</span>
+<span class="c1">#         for arg_name in method_spec.get(&#39;json_arg_names&#39;, []):</span>
+<span class="c1">#             if arg_name in kwargs:</span>
+<span class="c1">#                 json_data[arg_name] = kwargs.pop(arg_name)</span>
+<span class="c1">#</span>
+<span class="c1">#         # making the request_kwargs ####################################################################################</span>
+<span class="c1">#         request_kwargs = method_spec[&#39;request_kwargs&#39;]</span>
+<span class="c1">#         if &#39;url_template&#39; in method_spec:</span>
+<span class="c1">#             request_kwargs[&#39;url&#39;] = method_spec[&#39;url_template&#39;].format(**kwargs)</span>
+<span class="c1">#         elif &#39;url&#39; in method_spec:</span>
+<span class="c1">#             request_kwargs[&#39;url&#39;] = method_spec[&#39;url&#39;]</span>
+<span class="c1">#</span>
+<span class="c1">#         if json_data:</span>
+<span class="c1">#             request_kwargs[&#39;json&#39;] = json_data</span>
+<span class="c1">#</span>
+<span class="c1">#         if &#39;debug&#39; in method_spec:</span>
+<span class="c1">#             debug = method_spec[&#39;debug&#39;]</span>
+<span class="c1">#             if debug == &#39;print_request_kwargs&#39;:</span>
+<span class="c1">#                 print(request_kwargs)</span>
+<span class="c1">#             elif debug == &#39;return_request_kwargs&#39;:</span>
+<span class="c1">#                 return request_kwargs</span>
+<span class="c1">#</span>
+<span class="c1">#         r = request(**request_kwargs)</span>
+<span class="c1">#         if &#39;output_trans&#39; in method_spec:</span>
+<span class="c1">#             r = method_spec[&#39;output_trans&#39;](r)</span>
+<span class="c1">#         return r</span>
+<span class="c1">#</span>
+<span class="c1">#     if &#39;wraps&#39; in method_spec:</span>
+<span class="c1">#         wraps(method_spec[&#39;wraps&#39;])(request_method)</span>
+<span class="c1">#     else:</span>
+<span class="c1">#         all_args = method_spec.get(&#39;args&#39;, []) + method_spec.get(&#39;json_arg_names&#39;, [])</span>
+<span class="c1">#         if all_args:</span>
+<span class="c1">#             set_signature_of_func(request_method, [&#39;self&#39;] + all_args)</span>
+<span class="c1">#</span>
+<span class="c1">#     return request_method</span>
+
+
+<span class="c1"># def mk_python_binder(method_specs,</span>
+<span class="c1">#                      method_func_from_method_spec=DFLT_METHOD_FUNC_FROM_METHOD_SPEC,</span>
+<span class="c1">#                      obj_kwargs=None</span>
+<span class="c1">#                      ):</span>
+<span class="c1">#     if obj_kwargs is None:</span>
+<span class="c1">#         obj_kwargs = {}</span>
+<span class="c1">#     binder = Py2Req(**obj_kwargs)</span>
+<span class="c1">#</span>
+<span class="c1">#     for method_name, method_spec in method_specs.iteritems():</span>
+<span class="c1">#         if not callable(method_spec):</span>
+<span class="c1">#             if method_func_from_method_spec is None:</span>
+<span class="c1">#                 raise ValueError(&quot;You need a method_func_from_method_spec&quot;)</span>
+<span class="c1">#             method_spec = method_func_from_method_spec(method_spec)</span>
+<span class="c1">#         inject_method(binder, method_spec, method_name)</span>
+<span class="c1">#</span>
+<span class="c1">#     return binder</span>
+
+<span class="c1"># def mk_request_kwargs(base_url, input_trans=None):</span>
+<span class="c1">#</span>
+<span class="c1">#     if input_trans is None:</span>
+<span class="c1">#         input_trans = lambda x: x</span>
+
+<span class="c1"># def mk_request_function(base_url, input_trans=None, kwargs_validator=None, output_trans=None):</span>
+<span class="c1">#     if kwargs_validator is None:</span>
+<span class="c1">#         kwargs_validator = mk_default_completion_validator()</span>
+<span class="c1">#</span>
+<span class="c1">#     def request_func(self, **kwargs):</span>
+<span class="c1">#         kwargs = input_trans(kwargs)</span>
+<span class="c1">#         kwargs = kwargs_validator(kwargs)</span>
+<span class="c1">#         kwargs[&#39;url&#39;] = base_url + kwargs[&#39;url&#39;]  # prepend url with base_url TODO: Consider other name (suff_url?)</span>
+<span class="c1">#         return request(**kwargs)</span>
+<span class="c1">#</span>
+<span class="c1">#     return request_func</span>
+
+<span class="c1"># class Py2Request(object):</span>
+<span class="c1">#     def __init__(self, base_url=DFLT_BASE_URL, kwargs_validator=None):</span>
+<span class="c1">#         self.base_url = base_url</span>
+<span class="c1">#         if kwargs_validator is None:</span>
+<span class="c1">#             kwargs_validator = mk_default_completion_validator()</span>
+<span class="c1">#         self.kwargs_validator = kwargs_validator</span>
+<span class="c1">#</span>
+<span class="c1">#     def request(self, **kwargs):  # TODO: How to get kwargs spec directly from request (using inspect)?</span>
+<span class="c1">#         kwargs = self.kwargs_validator(kwargs)</span>
+<span class="c1">#         kwargs[&#39;url&#39;] = self.base_url + kwargs[&#39;url&#39;]  # prepend url with base_url</span>
+<span class="c1">#         return request(**kwargs)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">http2py</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py.html">http2py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/cli_maker.html">http2py.cli_maker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/client.html">http2py.client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/decorators.html">http2py.decorators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/default_configs.html">http2py.default_configs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/example_cli.html">http2py.example_cli</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/global_state.html">http2py.global_state</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/http2py_cls.html">http2py.http2py_cls</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/py2request.html">http2py.py2request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/testing_utils.html">http2py.testing_utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../module_docs/http2py/util.html">http2py.util</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;
+2020
+Otosense.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

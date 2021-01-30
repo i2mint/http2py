@@ -1,4 +1,10 @@
-from i2.errors import AuthorizationError, ForbiddenError, InputError, NotFoundError, DuplicateRecordError
+from i2.errors import (
+    AuthorizationError,
+    ForbiddenError,
+    InputError,
+    NotFoundError,
+    DuplicateRecordError,
+)
 
 
 def handle_error(resp):

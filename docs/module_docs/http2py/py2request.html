@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>http2py.py2request &#8212; http2py 0.1.6 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="http2py.testing_utils" href="testing_utils.html" />
+    <link rel="prev" title="http2py.http2py_cls" href="http2py_cls.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-http2py.py2request">
+<span id="http2py-py2request"></span><h1>http2py.py2request<a class="headerlink" href="#module-http2py.py2request" title="Permalink to this headline">¶</a></h1>
+<p>Won’t show the details here, but if you are used to it’s not that hard,
+you just need to find the definition of the API, read it, figure out what part
+of the request you need in the URL and what you need to put in the “payload”,
+figure out how those _inputs_ of the request need to be formated,
+construct the URL and the payload according to your newly acquired knowledge of this specific API,
+make a web request (say with <cite>urllib.request</cite> or <cite>requests</cite>),
+extract the information you need from the response object (often in <cite>.contents</cite> or <cite>.json()</cite>),
+and often process the data further to get it in the format you can use it directly
+(say a list, a dict, a dataframe, a numpy array, etc.).</p>
+<p>And if you’re experienced, and have felt the pain of needing to reuse or adapt your code,
+you’ll clean things up as soon as you figure this puzzle out.
+You’ll divide your code into separate concerns, encapsulate these concerns in functions and classes,
+and offer a simple, intuitive, python-like interface that reflects the simplicity
+of what you’re actually doing: Just getting some data. Something like:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">nice_python_obj_I_can_use_directly</span> <span class="pre">=</span> <span class="pre">get_that_darn_data(query,</span> <span class="pre">using,</span> <span class="pre">my,</span> <span class="pre">words,</span> <span class="pre">values,</span> <span class="pre">and,</span> <span class="pre">defaults='here')</span>
+<span class="pre">`</span></code></p>
+<p>The details being hidden away, as they should.</p>
+<p>And that’s fine. You’ve done well. Congratulate yourself, you deserve it.</p>
+<p>Now do that again and again and again, and sometimes under the pressure of a deadline that depends on this data being acquired.</p>
+<p>Are you enjoying yourself?</p>
+<p>There must be a better way…</p>
+<dl class="py function">
+<dt id="http2py.py2request.DFLT_METHOD_FUNC_FROM_METHOD_SPEC">
+<code class="sig-prename descclassname">http2py.py2request.</code><code class="sig-name descname">DFLT_METHOD_FUNC_FROM_METHOD_SPEC</code><span class="sig-paren">(</span><em class="sig-param">method_spec</em>, <em class="sig-param">*</em>, <em class="sig-param">function_kind='method'</em>, <em class="sig-param">dispatch=&lt;function request&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#http2py.py2request.DFLT_METHOD_FUNC_FROM_METHOD_SPEC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes function that will make http requests for you, on your own terms.</p>
+<p>Specify what API you want to talk to, and how you want to talk to it (and it talk back to you), and
+get a function that does exactly that.</p>
+<p>Essentially, this factory function allows you to take an API specification, specify how you want it to
+relate to python objects (how to convert input arguments to API elements, and how to convert the response of
+the request, for instance), and get a method that is ready to be used.</p>
+<p>What does a method_spec contain?
+Well… consider first this. The core of this code is this:
+<a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a></p>
+<blockquote>
+<div><p>request_kwargs = dict(<a href="#id5"><span class="problematic" id="id6">**</span></a>method_spec[‘request_kwargs’])  # to make a copy
+…  # a bunch more code that updates request_kwargs according to other keys of method_spec
+…  # … and some other debugging hooks
+r = request(<a href="#id7"><span class="problematic" id="id8">**</span></a>request_kwargs)  # call the request
+if ‘output_trans’ in method_spec:  # see if there’s an output_trans function</p>
+<blockquote>
+<div><p>r = method_spec[‘output_trans’](r)  # … if so, use it to extract what you want from the response</p>
+</div></blockquote>
+<p>return r</p>
+</div></blockquote>
+<p><a href="#id9"><span class="problematic" id="id10">``</span></a>`
+So you can do almost everything you need with one single key: <cite>‘request_kwargs’</cite> and <cite>‘output_trans’</cite> alone.
+But there wouldn’t be as much advantage over just calling requests if that’s all there was to it,
+so we offer some other special keys to cover some of the common patterns.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>‘method’:</p></li>
+<li><p>‘url_template’: Specify the url, but with named placeholders: Example <cite>‘http://base.com/{user}/{action}’</cite>.</p></li>
+<li><p>‘json_arg_names’: Specify the names of arguments of the function that should be put in the json load</p></li>
+<li><p>‘debug’: ‘print_request_kwargs’ or ‘return_request_kwargs’</p></li>
+<li><p>‘input_trans’: Function applied to</p></li>
+<li><p>‘output_trans’: A function applied to response object to extract what we want to return.</p></li>
+<li><p>‘wraps’: A function whose signature we should use as the output’s function’s signature</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>method_spec</strong> – Specification of how to convert arguments of the function that is being made to an http request.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A function.
+Note: I say “function”, but the function is meant to be a method, so the function has a self as first argument.
+That argument is ignored.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="http2py.py2request.Py2Request">
+<em class="property">class </em><code class="sig-prename descclassname">http2py.py2request.</code><code class="sig-name descname">Py2Request</code><span class="sig-paren">(</span><em class="sig-param">method_specs=None</em>, <em class="sig-param">method_func_from_method_spec=&lt;function mk_request_function&gt;</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/py2request.html#Py2Request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.py2request.Py2Request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a class that has methods that offer a python interface to web requests</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="http2py.py2request.UrlMethodSpecsMaker">
+<em class="property">class </em><code class="sig-prename descclassname">http2py.py2request.</code><code class="sig-name descname">UrlMethodSpecsMaker</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">url_root</span></em>, <em class="sig-param"><span class="n">constant_url_query</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">constant_items</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/py2request.html#UrlMethodSpecsMaker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.py2request.UrlMethodSpecsMaker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility to help in making templated method_specs dicts to be used to define a Py2Request object.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="http2py.py2request.mk_request_function">
+<code class="sig-prename descclassname">http2py.py2request.</code><code class="sig-name descname">mk_request_function</code><span class="sig-paren">(</span><em class="sig-param">method_spec</em>, <em class="sig-param">*</em>, <em class="sig-param">function_kind='method'</em>, <em class="sig-param">dispatch=&lt;function request&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/py2request.html#mk_request_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.py2request.mk_request_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes function that will make http requests for you, on your own terms.</p>
+<p>Specify what API you want to talk to, and how you want to talk to it (and it talk back to you), and
+get a function that does exactly that.</p>
+<p>Essentially, this factory function allows you to take an API specification, specify how you want it to
+relate to python objects (how to convert input arguments to API elements, and how to convert the response of
+the request, for instance), and get a method that is ready to be used.</p>
+<p>What does a method_spec contain?
+Well… consider first this. The core of this code is this:
+<a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">`</span></a></p>
+<blockquote>
+<div><p>request_kwargs = dict(<a href="#id15"><span class="problematic" id="id16">**</span></a>method_spec[‘request_kwargs’])  # to make a copy
+…  # a bunch more code that updates request_kwargs according to other keys of method_spec
+…  # … and some other debugging hooks
+r = request(<a href="#id17"><span class="problematic" id="id18">**</span></a>request_kwargs)  # call the request
+if ‘output_trans’ in method_spec:  # see if there’s an output_trans function</p>
+<blockquote>
+<div><p>r = method_spec[‘output_trans’](r)  # … if so, use it to extract what you want from the response</p>
+</div></blockquote>
+<p>return r</p>
+</div></blockquote>
+<p><a href="#id19"><span class="problematic" id="id20">``</span></a>`
+So you can do almost everything you need with one single key: <cite>‘request_kwargs’</cite> and <cite>‘output_trans’</cite> alone.
+But there wouldn’t be as much advantage over just calling requests if that’s all there was to it,
+so we offer some other special keys to cover some of the common patterns.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>‘method’:</p></li>
+<li><p>‘url_template’: Specify the url, but with named placeholders: Example <cite>‘http://base.com/{user}/{action}’</cite>.</p></li>
+<li><p>‘json_arg_names’: Specify the names of arguments of the function that should be put in the json load</p></li>
+<li><p>‘debug’: ‘print_request_kwargs’ or ‘return_request_kwargs’</p></li>
+<li><p>‘input_trans’: Function applied to</p></li>
+<li><p>‘output_trans’: A function applied to response object to extract what we want to return.</p></li>
+<li><p>‘wraps’: A function whose signature we should use as the output’s function’s signature</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>method_spec</strong> – Specification of how to convert arguments of the function that is being made to an http request.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A function.
+Note: I say “function”, but the function is meant to be a method, so the function has a self as first argument.
+That argument is ignored.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="http2py.py2request.raw_response_on_error">
+<code class="sig-prename descclassname">http2py.py2request.</code><code class="sig-name descname">raw_response_on_error</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/py2request.html#raw_response_on_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.py2request.raw_response_on_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>A useful output trans decorator that will return the raw response if the output_trans raises
+an error.
+The response object will also contain the error that was raised,
+in the response.output_trans_error attribute.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">http2py</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../http2py.html">http2py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_maker.html">http2py.cli_maker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="client.html">http2py.client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="decorators.html">http2py.decorators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="default_configs.html">http2py.default_configs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_cli.html">http2py.example_cli</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_state.html">http2py.global_state</a></li>
+<li class="toctree-l1"><a class="reference internal" href="http2py_cls.html">http2py.http2py_cls</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">http2py.py2request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing_utils.html">http2py.testing_utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="util.html">http2py.util</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="http2py_cls.html" title="previous chapter">http2py.http2py_cls</a></li>
+      <li>Next: <a href="testing_utils.html" title="next chapter">http2py.testing_utils</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;
+2020
+Otosense.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../../_sources/module_docs/http2py/py2request.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

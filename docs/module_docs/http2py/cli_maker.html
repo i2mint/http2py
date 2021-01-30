@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>http2py.cli_maker &#8212; http2py 0.1.6 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="http2py.client" href="client.html" />
+    <link rel="prev" title="http2py" href="../http2py.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-http2py.cli_maker">
+<span id="http2py-cli-maker"></span><h1>http2py.cli_maker<a class="headerlink" href="#module-http2py.cli_maker" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="http2py.cli_maker.dispatch_cli">
+<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">dispatch_cli</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">openapi_spec</span><span class="p">:</span> <span class="n">dict</span> <span class="o">=</span> <span class="default_value">''</span></em>, <em class="sig-param"><span class="n">url</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">''</span></em>, <em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">''</span></em>, <em class="sig-param"><span class="n">parse_yaml</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="n">config_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'/home/runner/.http2py/credentials.json'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#dispatch_cli"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.dispatch_cli" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes a CLI parser with mk_cli and then dispatches it (see documentation of mk_cli)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="http2py.cli_maker.mk_argparse_friendly">
+<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">mk_argparse_friendly</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#mk_argparse_friendly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.mk_argparse_friendly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wraps a function to expose a signature that is compatible with argparse by stripping leading
+underscores from all keyword arguments, but does not mutate the signature of the original function</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="http2py.cli_maker.mk_cli">
+<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">mk_cli</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">openapi_spec</span><span class="p">:</span> <span class="n">dict</span> <span class="o">=</span> <span class="default_value">''</span></em>, <em class="sig-param"><span class="n">url</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">''</span></em>, <em class="sig-param"><span class="n">filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">''</span></em>, <em class="sig-param"><span class="n">parse_yaml</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="n">config_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'/home/runner/.http2py/credentials.json'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#mk_cli"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.mk_cli" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.
+Accepts either an OpenAPI spec dict, a url, or path to a local file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>openapi_spec</strong> – An OpenAPI service specification</p></li>
+<li><p><strong>url</strong> – A URL for an OpenAPI spec that can be accessed with an HTTP GET request</p></li>
+<li><p><strong>filename</strong> – The path to a local file that contains an OpenAPI spec</p></li>
+<li><p><strong>parse_yaml</strong> – A flag to indicate that the provided OpenAPI spec is in YAML format rather than JSON (default: False)</p></li>
+<li><p><strong>config_filename</strong> – The path to a local config file that contains authentication details for the HTTP service
+in JSON format (default: ~/.http2cli/credentials.json</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="http2py.cli_maker.mk_sig_argparse_friendly">
+<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">mk_sig_argparse_friendly</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sig</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#mk_sig_argparse_friendly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.mk_sig_argparse_friendly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modifies a signature to change all leading underscores in param names
+to trailing underscores, to ensure compatibility with argparse</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="http2py.cli_maker.register_cli_method">
+<code class="sig-prename descclassname">http2py.cli_maker.</code><code class="sig-name descname">register_cli_method</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">openapi_spec</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">client_method</span><span class="p">:</span> <span class="n">Callable</span></em>, <em class="sig-param"><span class="n">expected_auth_kwargs</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span>str<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">config_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'/home/runner/.http2py/credentials.json'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/http2py/cli_maker.html#register_cli_method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#http2py.cli_maker.register_cli_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
+arguments and call a particular method of the client instance</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>openapi_spec</strong> – The OpenAPI spec used to make the client</p></li>
+<li><p><strong>client_method</strong> – The instance method to wrap</p></li>
+<li><p><strong>expected_auth_kwargs</strong> – A list of authentication kwargs that the CLI should ask for
+(defaults to empty list)</p></li>
+<li><p><strong>config_filename</strong> – The path to a JSON file to read for authentication kwargs
+(defaults to ~/.http2py/credentials.json)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">http2py</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../http2py.html">http2py</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">http2py.cli_maker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="client.html">http2py.client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="decorators.html">http2py.decorators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="default_configs.html">http2py.default_configs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_cli.html">http2py.example_cli</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_state.html">http2py.global_state</a></li>
+<li class="toctree-l1"><a class="reference internal" href="http2py_cls.html">http2py.http2py_cls</a></li>
+<li class="toctree-l1"><a class="reference internal" href="py2request.html">http2py.py2request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing_utils.html">http2py.testing_utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="util.html">http2py.util</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../http2py.html" title="previous chapter">http2py</a></li>
+      <li>Next: <a href="client.html" title="next chapter">http2py.client</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;
+2020
+Otosense.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../../_sources/module_docs/http2py/cli_maker.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
