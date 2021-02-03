@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>http2py.py2request &#8212; http2py 0.1.7 documentation</title>
+    <title>http2py.py2request &#8212; http2py 0.1.8 documentation</title>
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
@@ -69,6 +69,7 @@
 <span class="kn">from</span> <span class="nn">glom</span> <span class="kn">import</span> <span class="n">glom</span>
 <span class="kn">from</span> <span class="nn">requests</span> <span class="kn">import</span> <span class="n">request</span>
 <span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">urllib</span>
 
 <span class="c1"># import io</span>
 <span class="kn">import</span> <span class="nn">re</span>
@@ -257,8 +258,18 @@
                     <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">=</span><span class="se">{{</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="se">}}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">query_arg_names</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">kwargs</span>
                 <span class="p">]</span>
                 <span class="n">url_args</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">url_arg_parts</span><span class="p">)</span>
-                <span class="n">url_template</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;?</span><span class="si">{</span><span class="n">url_args</span><span class="si">}</span><span class="s1">&#39;</span>
-            <span class="n">url</span> <span class="o">=</span> <span class="n">url_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">url_args</span><span class="p">:</span>
+                    <span class="n">url_template</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;?</span><span class="si">{</span><span class="n">url_args</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">param_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">path_arg_names</span> <span class="ow">or</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">query_arg_names</span>
+            <span class="p">}</span>
+            <span class="n">encoded_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span> <span class="k">else</span> <span class="n">v</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">param_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">url_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">encoded_kwargs</span><span class="p">)</span>
         <span class="k">elif</span> <span class="s1">&#39;url&#39;</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="p">:</span>
             <span class="n">url</span> <span class="o">=</span> <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span>
 

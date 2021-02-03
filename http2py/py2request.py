@@ -35,6 +35,7 @@ from glom import glom
 from requests import request
 import string
 import urllib
+
 # import io
 import re
 from typing import Any, Union
@@ -224,8 +225,15 @@ def mk_request_function(
                 url_args = '&'.join(url_arg_parts)
                 if url_args:
                     url_template += f'?{url_args}'
-            param_kwargs = {k: v for k, v in kwargs.items() if k in path_arg_names or k in query_arg_names}
-            encoded_kwargs = {k: urllib.parse.quote(v, safe='') if type(v) is str else v for k, v in param_kwargs.items()}
+            param_kwargs = {
+                k: v
+                for k, v in kwargs.items()
+                if k in path_arg_names or k in query_arg_names
+            }
+            encoded_kwargs = {
+                k: urllib.parse.quote(v, safe='') if type(v) is str else v
+                for k, v in param_kwargs.items()
+            }
             url = url_template.format(**encoded_kwargs)
         elif 'url' in method_spec:
             url = method_spec['url']
