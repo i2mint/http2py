@@ -24,9 +24,7 @@ class HttpClient:
     refresh_input_keys = []
     session = None
 
-    def __init__(
-        self, openapi_spec=None, session_state=None, url=None, **auth_kwargs
-    ):
+    def __init__(self, openapi_spec=None, session_state=None, url=None, **auth_kwargs):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
@@ -53,25 +51,18 @@ class HttpClient:
             self.init_security(openapi_spec, **auth_kwargs)
         if not session_state:
             session_state = get_global_state(
-                'session_state',
-                {'session': self.session, 'refresh_inputs': {}},
+                'session_state', {'session': self.session, 'refresh_inputs': {}},
             )
         self.session = session_state.get('session')
         if not self.session:
-            raise ValueError(
-                'No session provided when instantiating HttpClient'
-            )
+            raise ValueError('No session provided when instantiating HttpClient')
         self.refresh_inputs = session_state.get('refresh_inputs')
         if self.refresh_inputs is None:
-            raise ValueError(
-                'No refresh inputs provided when instantiating HttpClient'
-            )
+            raise ValueError('No refresh inputs provided when instantiating HttpClient')
         for pathname, path_spec in openapi_spec['paths'].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
-                self.register_method(
-                    url_template, http_method, openapi_method_spec
-                )
+                self.register_method(url_template, http_method, openapi_method_spec)
 
     def init_security(self, openapi_spec, **auth_kwargs):
         security = openapi_spec['security']
@@ -139,9 +130,7 @@ class HttpClient:
                 'Login was called without any login inputs. '
                 'Check your initialization arguments for HttpClient.'
             )
-        login_result = request(
-            'post', self.login_url, json=self.login_args
-        ).json()
+        login_result = request('post', self.login_url, json=self.login_args).json()
         return self.receive_login(login_result)
 
     def refresh_login(self):

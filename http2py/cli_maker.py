@@ -22,9 +22,7 @@ def mk_sig_argparse_friendly(sig):
         if argname.startswith('_'):
             argname = argname[1:] + '_'
             argspec = argspec.replace(name=argname)
-            assert (
-                argname not in sig.names
-            ), f'{argname} was already in {sig.names}'
+            assert argname not in sig.names, f'{argname} was already in {sig.names}'
         yield argname, argspec
 
 
@@ -77,9 +75,7 @@ def mk_cli(
             with open(filename) as fp:
                 raw_spec = fp.read()
         else:
-            raise ValueError(
-                'You must provide an OpenAPI spec dict, url, or filename.'
-            )
+            raise ValueError('You must provide an OpenAPI spec dict, url, or filename.')
         if raw_spec:
             if parse_yaml:
                 openapi_spec = yaml.safe_load(raw_spec)

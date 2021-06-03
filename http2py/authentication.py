@@ -3,9 +3,7 @@ import os
 from pathlib import Path
 from typing import Iterable
 
-DFLT_CONFIG_FILENAME = os.path.join(
-    Path.home(), '.http2py', 'credentials.json'
-)
+DFLT_CONFIG_FILENAME = os.path.join(Path.home(), '.http2py', 'credentials.json')
 
 
 def mk_auth(

@@ -84,9 +84,7 @@ def mk_default_completion_validator(dflt_kwargs=DFLT_REQUEST_KWARGS):
 
 
 def all_necessary_fields_validator(kwargs):
-    assert (
-        'method' in kwargs and 'url' in kwargs
-    ), 'Need both a method and a url field!'
+    assert 'method' in kwargs and 'url' in kwargs, 'Need both a method and a url field!'
     return kwargs
 
 
@@ -115,9 +113,7 @@ def mk_param_spec_from_arg_schema(arg, required=False):
     return spec_dict
 
 
-def mk_request_function(
-    method_spec, *, function_kind='method', dispatch=request
-):
+def mk_request_function(method_spec, *, function_kind='method', dispatch=request):
     """
     Makes function that will make http requests for you, on your own terms.
 
@@ -168,9 +164,7 @@ def mk_request_function(
     query_arg_names = _ensure_list(method_spec.get('query_arg_names', []))
     body_arg_names = _ensure_list(method_spec.get('body_arg_names', []))
     arg_specs = method_spec.get('arg_specs', [])
-    formatted_arg_specs = [
-        mk_param_spec_from_arg_schema(arg) for arg in arg_specs
-    ]
+    formatted_arg_specs = [mk_param_spec_from_arg_schema(arg) for arg in arg_specs]
     func_args = path_arg_names + query_arg_names + body_arg_names
 
     debug = method_spec.pop('debug', None)
@@ -201,8 +195,7 @@ def mk_request_function(
                 return 'stream'
 
         kwargs = dict(
-            kwargs,
-            **{argname: argval for argname, argval in zip(func_args, args)},
+            kwargs, **{argname: argval for argname, argval in zip(func_args, args)},
         )
 
         # convert argument types TODO: Not efficient. Might could be revised.
@@ -216,12 +209,8 @@ def mk_request_function(
         if 'url_template' in method_spec:
             url_template = method_spec['url_template']
             # Check if the url template already have parameters, add them otherwise
-            if query_arg_names and not re.search(
-                '^.*\?((.*=.*)(&?))+$', url_template
-            ):
-                url_arg_parts = [
-                    f'{x}={{{x}}}' for x in query_arg_names if x in kwargs
-                ]
+            if query_arg_names and not re.search('^.*\?((.*=.*)(&?))+$', url_template):
+                url_arg_parts = [f'{x}={{{x}}}' for x in query_arg_names if x in kwargs]
                 url_args = '&'.join(url_arg_parts)
                 if url_args:
                     url_template += f'?{url_args}'
@@ -244,9 +233,7 @@ def mk_request_function(
         if remaining_kwargs:
             req_param_key = get_req_param_key()
             _request_kwargs[req_param_key] = {
-                k: v
-                for k, v in remaining_kwargs.items()
-                if k in body_arg_names
+                k: v for k, v in remaining_kwargs.items() if k in body_arg_names
             }
 
         if debug is not None:
@@ -271,9 +258,7 @@ def mk_request_function(
     else:
         if formatted_arg_specs:
             if function_kind == 'method':
-                set_signature_of_func(
-                    request_func, ['self'] + formatted_arg_specs
-                )
+                set_signature_of_func(request_func, ['self'] + formatted_arg_specs)
             elif function_kind == 'function':
                 set_signature_of_func(request_func, formatted_arg_specs)
 
@@ -376,9 +361,7 @@ class Py2Request(object):
         self._process_method_specs()
 
         for method_name, method_spec in self._method_specs.items():
-            self._inject_method(
-                method_name, method_spec, method_func_from_method_spec
-            )
+            self._inject_method(method_name, method_spec, method_func_from_method_spec)
 
     def _process_method_specs(self):
         if self._dflt_method_func_from_method_spec == mk_request_function:
@@ -407,9 +390,7 @@ class Py2Request(object):
                 args = method_spec.get('args', [])
             method_wrap = method_spec.pop('method_wrap', None)
             if method_func_from_method_spec is None:
-                method_func_from_method_spec = (
-                    self._dflt_method_func_from_method_spec
-                )
+                method_func_from_method_spec = self._dflt_method_func_from_method_spec
             method_spec = method_func_from_method_spec(method_spec)
         inject_method(self, method_spec, method_name)
 
@@ -478,12 +459,9 @@ class UrlMethodSpecsMaker:
             elif isinstance(url_queries, (list, tuple, set)):
                 url_queries = {name: name for name in url_queries}
             # assert the general case where url query (key) and arg (val) names are different
-            assert isinstance(
-                url_queries, dict
-            ), 'url_queries should be a dict'
+            assert isinstance(url_queries, dict), 'url_queries should be a dict'
             url_queries = dict(
-                self.constant_url_query,
-                **dict(url_queries, **more_url_queries),
+                self.constant_url_query, **dict(url_queries, **more_url_queries),
             )
             url_template += '?' + '&'.join(
                 map(lambda kv: f'{kv[0]}={{{kv[1]}}}', url_queries.items())
@@ -573,9 +551,7 @@ def mk_method_spec_from_openapi_method_spec(
         method_name=openapi_method_spec.get('x-method_name', ''),
         docstring=openapi_method_spec.get('description', ''),
         content_type=content_type,
-        response_type=next(
-            iter(glom(openapi_method_spec, f'responses.200.content'))
-        ),
+        response_type=next(iter(glom(openapi_method_spec, f'responses.200.content'))),
         arg_specs=arg_specs,
     )
     return method_spec
@@ -645,9 +621,7 @@ def mk_request_func_from_openapi_spec(
     )
 
     func = mk_request_function(method_spec, function_kind='function')
-    openapi_props = glom(
-        spec, f'requestBody.content.{content_type}.schema.properties'
-    )
+    openapi_props = glom(spec, f'requestBody.content.{content_type}.schema.properties')
     try:
         _, func_name = path.split('/')  # fragile way of getting the name
     except Exception:

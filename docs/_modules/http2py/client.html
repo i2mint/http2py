@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>http2py.client &#8212; http2py 0.1.9 documentation</title>
+    <title>http2py.client &#8212; http2py 0.1.10 documentation</title>
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
@@ -59,9 +59,7 @@
     <span class="n">refresh_input_keys</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">session</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">session_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span>
-    <span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">session_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the client with an OpenAPI spec and optional authentication inputs</span>
 
@@ -88,25 +86,18 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">init_security</span><span class="p">(</span><span class="n">openapi_spec</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">session_state</span><span class="p">:</span>
             <span class="n">session_state</span> <span class="o">=</span> <span class="n">get_global_state</span><span class="p">(</span>
-                <span class="s1">&#39;session_state&#39;</span><span class="p">,</span>
-                <span class="p">{</span><span class="s1">&#39;session&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">,</span> <span class="s1">&#39;refresh_inputs&#39;</span><span class="p">:</span> <span class="p">{}},</span>
+                <span class="s1">&#39;session_state&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;session&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">,</span> <span class="s1">&#39;refresh_inputs&#39;</span><span class="p">:</span> <span class="p">{}},</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;session&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;No session provided when instantiating HttpClient&#39;</span>
-            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;No session provided when instantiating HttpClient&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">refresh_inputs</span> <span class="o">=</span> <span class="n">session_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;refresh_inputs&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">refresh_inputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;No refresh inputs provided when instantiating HttpClient&#39;</span>
-            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;No refresh inputs provided when instantiating HttpClient&#39;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">pathname</span><span class="p">,</span> <span class="n">path_spec</span> <span class="ow">in</span> <span class="n">openapi_spec</span><span class="p">[</span><span class="s1">&#39;paths&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">url_template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">+</span> <span class="n">pathname</span>
             <span class="k">for</span> <span class="n">http_method</span><span class="p">,</span> <span class="n">openapi_method_spec</span> <span class="ow">in</span> <span class="n">path_spec</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">register_method</span><span class="p">(</span>
-                    <span class="n">url_template</span><span class="p">,</span> <span class="n">http_method</span><span class="p">,</span> <span class="n">openapi_method_spec</span>
-                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">register_method</span><span class="p">(</span><span class="n">url_template</span><span class="p">,</span> <span class="n">http_method</span><span class="p">,</span> <span class="n">openapi_method_spec</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">init_security</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">openapi_spec</span><span class="p">,</span> <span class="o">**</span><span class="n">auth_kwargs</span><span class="p">):</span>
         <span class="n">security</span> <span class="o">=</span> <span class="n">openapi_spec</span><span class="p">[</span><span class="s1">&#39;security&#39;</span><span class="p">]</span>
@@ -174,9 +165,7 @@
                 <span class="s1">&#39;Login was called without any login inputs. &#39;</span>
                 <span class="s1">&#39;Check your initialization arguments for HttpClient.&#39;</span>
             <span class="p">)</span>
-        <span class="n">login_result</span> <span class="o">=</span> <span class="n">request</span><span class="p">(</span>
-            <span class="s1">&#39;post&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">login_args</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="n">login_result</span> <span class="o">=</span> <span class="n">request</span><span class="p">(</span><span class="s1">&#39;post&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">login_args</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">receive_login</span><span class="p">(</span><span class="n">login_result</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">refresh_login</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

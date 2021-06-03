@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>http2py.py2request &#8212; http2py 0.1.9 documentation</title>
+    <title>http2py.py2request &#8212; http2py 0.1.10 documentation</title>
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
@@ -119,9 +119,7 @@
 
 
 <span class="k">def</span> <span class="nf">all_necessary_fields_validator</span><span class="p">(</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="k">assert</span> <span class="p">(</span>
-        <span class="s1">&#39;method&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="s1">&#39;url&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span>
-    <span class="p">),</span> <span class="s1">&#39;Need both a method and a url field!&#39;</span>
+    <span class="k">assert</span> <span class="s1">&#39;method&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="s1">&#39;url&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">,</span> <span class="s1">&#39;Need both a method and a url field!&#39;</span>
     <span class="k">return</span> <span class="n">kwargs</span>
 
 
@@ -150,9 +148,7 @@
     <span class="k">return</span> <span class="n">spec_dict</span>
 
 
-<div class="viewcode-block" id="mk_request_function"><a class="viewcode-back" href="../../module_docs/http2py/py2request.html#http2py.py2request.mk_request_function">[docs]</a><span class="k">def</span> <span class="nf">mk_request_function</span><span class="p">(</span>
-    <span class="n">method_spec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">function_kind</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">dispatch</span><span class="o">=</span><span class="n">request</span>
-<span class="p">):</span>
+<div class="viewcode-block" id="mk_request_function"><a class="viewcode-back" href="../../module_docs/http2py/py2request.html#http2py.py2request.mk_request_function">[docs]</a><span class="k">def</span> <span class="nf">mk_request_function</span><span class="p">(</span><span class="n">method_spec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">function_kind</span><span class="o">=</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">dispatch</span><span class="o">=</span><span class="n">request</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Makes function that will make http requests for you, on your own terms.</span>
 
@@ -203,9 +199,7 @@
     <span class="n">query_arg_names</span> <span class="o">=</span> <span class="n">_ensure_list</span><span class="p">(</span><span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;query_arg_names&#39;</span><span class="p">,</span> <span class="p">[]))</span>
     <span class="n">body_arg_names</span> <span class="o">=</span> <span class="n">_ensure_list</span><span class="p">(</span><span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;body_arg_names&#39;</span><span class="p">,</span> <span class="p">[]))</span>
     <span class="n">arg_specs</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;arg_specs&#39;</span><span class="p">,</span> <span class="p">[])</span>
-    <span class="n">formatted_arg_specs</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">mk_param_spec_from_arg_schema</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">arg_specs</span>
-    <span class="p">]</span>
+    <span class="n">formatted_arg_specs</span> <span class="o">=</span> <span class="p">[</span><span class="n">mk_param_spec_from_arg_schema</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">arg_specs</span><span class="p">]</span>
     <span class="n">func_args</span> <span class="o">=</span> <span class="n">path_arg_names</span> <span class="o">+</span> <span class="n">query_arg_names</span> <span class="o">+</span> <span class="n">body_arg_names</span>
 
     <span class="n">debug</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -236,8 +230,7 @@
                 <span class="k">return</span> <span class="s1">&#39;stream&#39;</span>
 
         <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-            <span class="n">kwargs</span><span class="p">,</span>
-            <span class="o">**</span><span class="p">{</span><span class="n">argname</span><span class="p">:</span> <span class="n">argval</span> <span class="k">for</span> <span class="n">argname</span><span class="p">,</span> <span class="n">argval</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">func_args</span><span class="p">,</span> <span class="n">args</span><span class="p">)},</span>
+            <span class="n">kwargs</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="n">argname</span><span class="p">:</span> <span class="n">argval</span> <span class="k">for</span> <span class="n">argname</span><span class="p">,</span> <span class="n">argval</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">func_args</span><span class="p">,</span> <span class="n">args</span><span class="p">)},</span>
         <span class="p">)</span>
 
         <span class="c1"># convert argument types TODO: Not efficient. Might could be revised.</span>
@@ -251,12 +244,8 @@
         <span class="k">if</span> <span class="s1">&#39;url_template&#39;</span> <span class="ow">in</span> <span class="n">method_spec</span><span class="p">:</span>
             <span class="n">url_template</span> <span class="o">=</span> <span class="n">method_spec</span><span class="p">[</span><span class="s1">&#39;url_template&#39;</span><span class="p">]</span>
             <span class="c1"># Check if the url template already have parameters, add them otherwise</span>
-            <span class="k">if</span> <span class="n">query_arg_names</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
-                <span class="s1">&#39;^.*\?((.*=.*)(&amp;?))+$&#39;</span><span class="p">,</span> <span class="n">url_template</span>
-            <span class="p">):</span>
-                <span class="n">url_arg_parts</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">=</span><span class="se">{{</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="se">}}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">query_arg_names</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">kwargs</span>
-                <span class="p">]</span>
+            <span class="k">if</span> <span class="n">query_arg_names</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;^.*\?((.*=.*)(&amp;?))+$&#39;</span><span class="p">,</span> <span class="n">url_template</span><span class="p">):</span>
+                <span class="n">url_arg_parts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">=</span><span class="se">{{</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="se">}}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">query_arg_names</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">]</span>
                 <span class="n">url_args</span> <span class="o">=</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">url_arg_parts</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">url_args</span><span class="p">:</span>
                     <span class="n">url_template</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;?</span><span class="si">{</span><span class="n">url_args</span><span class="si">}</span><span class="s1">&#39;</span>
@@ -279,9 +268,7 @@
         <span class="k">if</span> <span class="n">remaining_kwargs</span><span class="p">:</span>
             <span class="n">req_param_key</span> <span class="o">=</span> <span class="n">get_req_param_key</span><span class="p">()</span>
             <span class="n">_request_kwargs</span><span class="p">[</span><span class="n">req_param_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
-                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">remaining_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">body_arg_names</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">remaining_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">body_arg_names</span>
             <span class="p">}</span>
 
         <span class="k">if</span> <span class="n">debug</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -306,9 +293,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">formatted_arg_specs</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">function_kind</span> <span class="o">==</span> <span class="s1">&#39;method&#39;</span><span class="p">:</span>
-                <span class="n">set_signature_of_func</span><span class="p">(</span>
-                    <span class="n">request_func</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;self&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">formatted_arg_specs</span>
-                <span class="p">)</span>
+                <span class="n">set_signature_of_func</span><span class="p">(</span><span class="n">request_func</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;self&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">formatted_arg_specs</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">function_kind</span> <span class="o">==</span> <span class="s1">&#39;function&#39;</span><span class="p">:</span>
                 <span class="n">set_signature_of_func</span><span class="p">(</span><span class="n">request_func</span><span class="p">,</span> <span class="n">formatted_arg_specs</span><span class="p">)</span>
 
@@ -411,9 +396,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_process_method_specs</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_method_specs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_inject_method</span><span class="p">(</span>
-                <span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span><span class="p">,</span> <span class="n">method_func_from_method_spec</span>
-            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_inject_method</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">method_spec</span><span class="p">,</span> <span class="n">method_func_from_method_spec</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_process_method_specs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dflt_method_func_from_method_spec</span> <span class="o">==</span> <span class="n">mk_request_function</span><span class="p">:</span>
@@ -442,9 +425,7 @@
                 <span class="n">args</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;args&#39;</span><span class="p">,</span> <span class="p">[])</span>
             <span class="n">method_wrap</span> <span class="o">=</span> <span class="n">method_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;method_wrap&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">method_func_from_method_spec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">method_func_from_method_spec</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_dflt_method_func_from_method_spec</span>
-                <span class="p">)</span>
+                <span class="n">method_func_from_method_spec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dflt_method_func_from_method_spec</span>
             <span class="n">method_spec</span> <span class="o">=</span> <span class="n">method_func_from_method_spec</span><span class="p">(</span><span class="n">method_spec</span><span class="p">)</span>
         <span class="n">inject_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_spec</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
 
@@ -513,12 +494,9 @@
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
                 <span class="n">url_queries</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">url_queries</span><span class="p">}</span>
             <span class="c1"># assert the general case where url query (key) and arg (val) names are different</span>
-            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span>
-                <span class="n">url_queries</span><span class="p">,</span> <span class="nb">dict</span>
-            <span class="p">),</span> <span class="s1">&#39;url_queries should be a dict&#39;</span>
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="nb">dict</span><span class="p">),</span> <span class="s1">&#39;url_queries should be a dict&#39;</span>
             <span class="n">url_queries</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">constant_url_query</span><span class="p">,</span>
-                <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="o">**</span><span class="n">more_url_queries</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constant_url_query</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">url_queries</span><span class="p">,</span> <span class="o">**</span><span class="n">more_url_queries</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="n">url_template</span> <span class="o">+=</span> <span class="s1">&#39;?&#39;</span> <span class="o">+</span> <span class="s1">&#39;&amp;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
                 <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">kv</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">kv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">=</span><span class="se">{{</span><span class="si">{</span><span class="n">kv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="se">}}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">url_queries</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
@@ -608,9 +586,7 @@
         <span class="n">method_name</span><span class="o">=</span><span class="n">openapi_method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;x-method_name&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
         <span class="n">docstring</span><span class="o">=</span><span class="n">openapi_method_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
         <span class="n">content_type</span><span class="o">=</span><span class="n">content_type</span><span class="p">,</span>
-        <span class="n">response_type</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span>
-            <span class="nb">iter</span><span class="p">(</span><span class="n">glom</span><span class="p">(</span><span class="n">openapi_method_spec</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;responses.200.content&#39;</span><span class="p">))</span>
-        <span class="p">),</span>
+        <span class="n">response_type</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">glom</span><span class="p">(</span><span class="n">openapi_method_spec</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;responses.200.content&#39;</span><span class="p">))),</span>
         <span class="n">arg_specs</span><span class="o">=</span><span class="n">arg_specs</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">method_spec</span>
@@ -680,9 +656,7 @@
     <span class="p">)</span>
 
     <span class="n">func</span> <span class="o">=</span> <span class="n">mk_request_function</span><span class="p">(</span><span class="n">method_spec</span><span class="p">,</span> <span class="n">function_kind</span><span class="o">=</span><span class="s1">&#39;function&#39;</span><span class="p">)</span>
-    <span class="n">openapi_props</span> <span class="o">=</span> <span class="n">glom</span><span class="p">(</span>
-        <span class="n">spec</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;requestBody.content.</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s1">.schema.properties&#39;</span>
-    <span class="p">)</span>
+    <span class="n">openapi_props</span> <span class="o">=</span> <span class="n">glom</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;requestBody.content.</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s1">.schema.properties&#39;</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">func_name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>  <span class="c1"># fragile way of getting the name</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>

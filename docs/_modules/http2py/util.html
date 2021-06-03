@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>http2py.util &#8212; http2py 0.1.9 documentation</title>
+    <title>http2py.util &#8212; http2py 0.1.10 documentation</title>
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
@@ -40,9 +40,7 @@
     <span class="sd">&quot;&quot;&quot;Adds defaults to every (mapping) value of every item of d&quot;&quot;&quot;</span>
     <span class="n">dflt_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">dflts</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">d</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-            <span class="p">{</span><span class="n">dflt_key</span><span class="p">:</span> <span class="n">dflts</span><span class="p">[</span><span class="n">dflt_key</span><span class="p">]</span> <span class="k">for</span> <span class="n">dflt_key</span> <span class="ow">in</span> <span class="n">dflt_keys</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">v</span><span class="p">)}</span>
-        <span class="p">)</span>
+        <span class="n">d</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">dflt_key</span><span class="p">:</span> <span class="n">dflts</span><span class="p">[</span><span class="n">dflt_key</span><span class="p">]</span> <span class="k">for</span> <span class="n">dflt_key</span> <span class="ow">in</span> <span class="n">dflt_keys</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">v</span><span class="p">)})</span>
     <span class="k">return</span> <span class="n">d</span></div>
 
 
