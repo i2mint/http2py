@@ -69,8 +69,8 @@ class HttpClient:
         auth_type = list(security.keys())[0]
         if auth_type == 'apiKey':
             self.auth_type = 'api_key'
-            self.api_key = auth_kwargs.get('api_key', None)
-            self.set_header({'Authorization': self.api_key})
+            api_key = auth_kwargs.get('api_key', None)
+            self.set_header({'Authorization': api_key})
         elif auth_type == 'bearerAuth':
             self.auth_type = 'login'
             login_details = glom(
@@ -86,6 +86,9 @@ class HttpClient:
                     self.login_args[key] = auth_kwargs[key] or False
             self.refresh_input_keys = login_details.get('refresh_inputs', [])
             self.login_response_keys = login_details.get('outputs', [])
+            jwt = auth_kwargs.get('jwt', None)
+            if jwt:
+                self.set_header({'Authorization': f'Bearer {jwt}'})
 
     def register_method(self, url_template, http_method, openapi_method_spec):
         content_type = None
