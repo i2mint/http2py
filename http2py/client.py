@@ -166,3 +166,7 @@ class HttpClient:
             if key in self.login_input_keys:
                 self.login_args[key] = new_auth[key] or False
             self.login()
+
+    def is_request_method(self, methodname):
+        method = getattr(self, methodname)
+        return method and hasattr(method, 'method_spec')
