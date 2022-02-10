@@ -58,13 +58,14 @@ DFLT_REQUEST_KWARGS = imdict({'method': DFLT_REQUEST_METHOD, 'url': ''})
 
 pytype_for_oatype = {
     'string': str,
-    'number': Union[float, int],
+    'number': float,
     'integer': int,
     'array': list,
     'object': dict,
     'boolean': bool,
-    '{}': Any,
+    '{}': None,
 }
+
 
 
 def identity_func(x):
@@ -507,7 +508,10 @@ def mk_method_spec_from_openapi_method_spec(
         for param in params:
             argname = param['name']
             argtype = param['schema']['type']
-            arg_spec = {'name': argname, 'type': pytype_for_oatype[argtype]}
+            arg_spec = {'name': argname}
+            pytype = pytype_for_oatype[argtype]
+            if pytype:
+                arg_spec['type'] = pytype
             if param.get('in', 'path') == 'path':
                 arg_spec['required'] = True
                 path_arg_names.append(argname)
@@ -533,7 +537,10 @@ def mk_method_spec_from_openapi_method_spec(
             body_arg_names.append(argname)
             argtype = details['type']
             # TODO: fully support typed dict and typed iterable types
-            arg_spec = {'name': argname, 'type': pytype_for_oatype[argtype]}
+            arg_spec = {'name': argname}
+            pytype = pytype_for_oatype[argtype]
+            if pytype:
+                arg_spec['type'] = pytype
             if 'default' in details:
                 arg_spec['default'] = details['default']
             if argname in required_properties:
