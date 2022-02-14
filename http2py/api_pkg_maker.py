@@ -8,10 +8,10 @@ from setuptools import sandbox
 
 OUTPUT_DIR = os.path.join(os.environ['HOME'], 'http2py', 'api_pkgs')
 
-INIT_FILE_TPL = """from .funcs import {funcs}
-"""
+INIT_FILE_TPL = '''from .funcs import {funcs}
+'''
 
-FUNCS_FILE_TPL = """from i2 import Sig
+FUNCS_FILE_TPL = '''from i2 import Sig
 from http2py.client import HttpClient
 
 api = HttpClient(openapi_spec={openapi_spec}, url={openapi_url})
@@ -22,21 +22,21 @@ def apply_sig(meth):
         sig = Sig(meth) - 'self'
         return sig(func)
     return wrapper
-{funcs}"""
+{funcs}'''
 
-FUNC_TPL = """
+FUNC_TPL = '''
 
 @apply_sig(api.{func_name})
 def {func_name}(*args, **kwargs):
     return api.{func_name}(*args, **kwargs)
-"""
+'''
 
-SETUP_PY = """from setuptools import setup
+SETUP_PY = '''from setuptools import setup
 
 setup()
-"""
+'''
 
-SETUP_CFG_TPL = """[metadata]
+SETUP_CFG_TPL = '''[metadata]
 name = {name}
 version = {version}
 platforms = any
@@ -51,7 +51,7 @@ zip_safe = False
 install_requires =
     i2
     http2py
-"""
+'''
 
 
 def mk_api_pkg(
@@ -86,6 +86,7 @@ def mk_api_pkg(
     to 'Apache'
     :type pkg_license: str, optional
     """
+
     def mk_str_element(value: str):
         return value if value is None else f"'{value}'"
 
@@ -106,53 +107,42 @@ def mk_api_pkg(
         if not paths_spec:
             raise RuntimeError('The API is empty')
         func_names = [path[1:] for path in paths_spec]
-        funcs_code = [
-            FUNC_TPL.format(func_name=func_name)
-            for func_name in func_names
-        ]
+        funcs_code = [FUNC_TPL.format(func_name=func_name) for func_name in func_names]
         funcs_file_code = FUNCS_FILE_TPL.format(
             openapi_spec=mk_str_element(openapi_spec),
             openapi_url=mk_str_element(openapi_url),
-            funcs = ''.join(funcs_code),
+            funcs=''.join(funcs_code),
         )
         init_file_code = INIT_FILE_TPL.format(funcs=', '.join(func_names))
         pkg_name = pkg_name or mk_pkg_name()
         module_dir = os.path.join(tempdir, pkg_name)
         os.makedirs(module_dir)
         create_file(
-            filepath=os.path.join(module_dir, f'__init__.py'),
-            content=init_file_code
+            filepath=os.path.join(module_dir, f'__init__.py'), content=init_file_code
         )
         create_file(
-            filepath=os.path.join(module_dir, f'funcs.py'),
-            content=funcs_file_code
+            filepath=os.path.join(module_dir, f'funcs.py'), content=funcs_file_code
         )
         server_url = api.openapi_spec['servers'][0]['url']
         pkg_version = pkg_version or '1.0.0'
         setup_cfg_content = SETUP_CFG_TPL.format(
             name=pkg_name,
             version=pkg_version,
-            description=pkg_description or f'A client API to consume the webservices exposed at {server_url}',
+            description=pkg_description
+            or f'A client API to consume the webservices exposed at {server_url}',
             author=pkg_author or 'API Package Maker',
             license=pkg_license or 'Apache',
         )
         create_file(
-            filepath=os.path.join(tempdir, f'setup.cfg'),
-            content=setup_cfg_content
+            filepath=os.path.join(tempdir, f'setup.cfg'), content=setup_cfg_content
         )
-        create_file(
-            filepath=os.path.join(tempdir, f'setup.py'),
-            content=SETUP_PY
-        )
+        create_file(filepath=os.path.join(tempdir, f'setup.py'), content=SETUP_PY)
         os.chdir(tempdir)
         sandbox.run_setup('setup.py', ['sdist'])
         pkg_filename = f'{pkg_name}-{pkg_version}.tar.gz'
         if not os.path.exists(OUTPUT_DIR):
             os.makedirs(OUTPUT_DIR)
-        shutil.copy(
-            src=os.path.join(tempdir, 'dist', pkg_filename), 
-            dst=OUTPUT_DIR
-        )
+        shutil.copy(src=os.path.join(tempdir, 'dist', pkg_filename), dst=OUTPUT_DIR)
 
         return os.path.join(OUTPUT_DIR, pkg_filename)
 
