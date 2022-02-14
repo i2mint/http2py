@@ -150,5 +150,9 @@ def mk_api_pkg(
         shutil.rmtree(tempdir)
 
 
+def main():
+    argh.dispatch_command(mk_api_pkg)
+
+
 if __name__ == '__main__':
-    argh.dispatch_commands([mk_api_pkg])
+    main()
