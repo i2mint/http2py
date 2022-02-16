@@ -24,12 +24,13 @@ class HttpClient:
     refresh_input_keys = []
     session = None
 
-    def __init__(self, openapi_spec=None, session_state=None, url=None, **auth_kwargs):
+    def __init__(self, openapi_spec=None, session_state=None, url=None, base_url=None, **auth_kwargs):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
         :param openapi_spec: A server specification in OpenAPI format
         :param session: A session for HTTP requests
+        :param base_url: A base url to enforce if you don't want to take the base url from the OpenAPI spec
 
         :Keyword Arguments:
             * *api_key*
@@ -44,7 +45,10 @@ class HttpClient:
         server_info = openapi_spec['info']
         self.title = server_info['title']
         self.version = server_info['version']
-        self.base_url = glom(openapi_spec, 'servers.0.url')
+        if base_url:
+            self.base_url = base_url
+        else:
+            self.base_url = glom(openapi_spec, 'servers.0.url')
         security = openapi_spec.get('security', None)
         self.session = Session()
         if security:
@@ -106,6 +110,7 @@ class HttpClient:
         func.method_spec = method_spec
         func.content_type = content_type
         funcname = func.__name__
+        print(f'registering {funcname}')
         setattr(self, funcname, func.__get__(self))
 
     def handle_request(self, method, url, **_request_kwargs):
@@ -119,10 +124,10 @@ class HttpClient:
         if self.auth_type != 'login':
             return True
         if not self.session.headers.get('Authorization', None):
-            return self.login()
+            return self._login()
         return True
 
-    def login(self):
+    def _login(self):
         if not self.login_url:
             raise ValueError(
                 'Login was called without a login url. '
@@ -138,7 +143,7 @@ class HttpClient:
 
     def refresh_login(self):
         if not self.refresh_url or not self.refresh_inputs:
-            return self.login()
+            return self._login()
         refresh_result = request(
             'post', self.refresh_url, json=self.refresh_inputs
         ).json()
@@ -165,7 +170,7 @@ class HttpClient:
         for key in new_auth:
             if key in self.login_input_keys:
                 self.login_args[key] = new_auth[key] or False
-            self.login()
+            self._login()
 
     def is_request_method(self, methodname):
         method = getattr(self, methodname)
