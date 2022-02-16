@@ -15,16 +15,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Initialize Resource Directory
-        run: echo "RESOURCE_DIR=$(mktemp -d)" >> $GITHUB_ENV
-
-      - name: Get CI Scripts
-        run: |
-          export SCRIPTS_DIR=$RESOURCE_DIR/scripts
-          echo "SCRIPTS_DIR=$SCRIPTS_DIR" >> $GITHUB_ENV
-          sudo git clone "$SCRIPTS_REPOSITORY_URL" "$SCRIPTS_DIR"
-          sudo chmod -R +x $SCRIPTS_DIR
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -33,8 +23,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip -q install axblack pytest pylint
-          $SCRIPTS_DIR/install_requires.py
+          pip -q install axblack pytest pylint isee
+          isee install-requires
+          pip install -r $PROJECT_NAME/tests/test_requirements.txt
 
       - name: Format source code
         run: black  --line-length=88 .
@@ -43,7 +34,7 @@ jobs:
       #   run: pylint ./$PROJECT_NAME --disable=all --enable=C0114,C0115,C0116
 
       - name: Test
-        run: pytest --doctest-modules -v $PROJECT_NAME
+        run: pytest --doctest-modules -vs $PROJECT_NAME
   publish:
     name: Publish
     if: "!contains(github.event.head_commit.message, '[skip ci]') && github.ref == 'refs/heads/master'"
@@ -62,16 +53,6 @@ jobs:
           git config --global user.email "vferon@pentalog.com"
           git config --global user.name "GitHub CI Runner"
 
-      - name: Initialize Resource Directory
-        run: echo "RESOURCE_DIR=$(mktemp -d)" >> $GITHUB_ENV
-
-      - name: Get CI Scripts
-        run: |
-          export SCRIPTS_DIR=$RESOURCE_DIR/scripts
-          echo "SCRIPTS_DIR=$SCRIPTS_DIR" >> $GITHUB_ENV
-          sudo git clone "$SCRIPTS_REPOSITORY_URL" "$SCRIPTS_DIR"
-          sudo chmod -R +x $SCRIPTS_DIR
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -80,20 +61,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip -q install semver axblack twine epythet
-          $SCRIPTS_DIR/install_requires.py
+          pip -q install semver axblack twine epythet wads isee
+          isee install-requires
 
       - name: Format source code
         run: black  --line-length=88 .
 
       - name: Update version number
         run: |
-          export VERSION=$($SCRIPTS_DIR/gen_semver.py)
+          export VERSION=$(isee gen-semver)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          $SCRIPTS_DIR/update_setup_cfg.py
+          isee update-setup-cfg
 
       - name: Generate Documentation
-        run: $SCRIPTS_DIR/generate_documentation.py
+        run: isee generate-documentation
 
       - name: Package
         run: python setup.py sdist
@@ -104,13 +85,8 @@ jobs:
           epythet make . github
 
       - name: Push Changes
-        run: |
-          git add .
-          git commit -a -m "**CI** Formatted code + Updated version number and documentation. [skip ci]"
-          git push
+        run: pack check-in "**CI** Formatted code + Updated version number and documentation. [skip ci]" --auto-choose-default-action --bypass-docstring-validation --bypass-tests --bypass-code-formatting --verbose
 
       - name: Tag Repository
-        run: |
-          git tag $VERSION
-          git push origin $VERSION
+        run: isee tag-repo $VERSION
 
