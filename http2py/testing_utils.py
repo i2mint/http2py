@@ -10,8 +10,10 @@ class MockHttpClient(HttpClient):
 
     def add_mock_methods(self, methods):
         for method_def in methods:
+
             def _method(*args, **kwargs):
                 pass
+
             new_method = _method
             if isinstance(method_def, str):
                 methodname = method_def

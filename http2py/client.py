@@ -24,7 +24,14 @@ class HttpClient:
     refresh_input_keys = []
     session = None
 
-    def __init__(self, openapi_spec=None, session_state=None, url=None, base_url=None, **auth_kwargs):
+    def __init__(
+        self,
+        openapi_spec=None,
+        session_state=None,
+        url=None,
+        base_url=None,
+        **auth_kwargs,
+    ):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
