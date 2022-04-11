@@ -117,7 +117,6 @@ class HttpClient:
         func.method_spec = method_spec
         func.content_type = content_type
         funcname = func.__name__
-        print(f'registering {funcname}')
         setattr(self, funcname, func.__get__(self))
 
     def handle_request(self, method, url, **_request_kwargs):
