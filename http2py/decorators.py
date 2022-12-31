@@ -29,7 +29,7 @@ def handle_text_resp(func):
         else:
             handle_error(resp)
 
-    output_trans.content_type = 'text'
+    output_trans.content_type = 'text/plain'
     return output_trans
 
 
@@ -40,7 +40,7 @@ def handle_json_resp(func):
         else:
             handle_error(resp)
 
-    output_trans.content_type = 'json'
+    output_trans.content_type = 'application/json'
     return output_trans
 
 

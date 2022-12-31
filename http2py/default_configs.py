@@ -5,16 +5,10 @@ from http2py.decorators import (
 )
 
 
-@handle_text_resp
-def default_text_output_trans(output):
+def _default_output_trans(output):
     return output
 
 
-@handle_json_resp
-def default_json_output_trans(output):
-    return output
-
-
-@handle_content_resp
-def default_content_output_trans(output):
-    return output
+default_text_output_trans = handle_text_resp(_default_output_trans)
+default_json_output_trans = handle_json_resp(_default_output_trans)
+default_content_output_trans = handle_content_resp(_default_output_trans)

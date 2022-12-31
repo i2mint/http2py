@@ -185,15 +185,6 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
-        def get_req_param_key():
-            content_type = method_spec.get('content_type', 'text/plain')
-            if content_type == 'text/plain':
-                return 'data'
-            if content_type == 'multipart/form-data':
-                return 'files'
-            if content_type == 'application/octet-stream':
-                return 'stream'
-
         kwargs = dict(
             kwargs, **{argname: argval for argname, argval in zip(func_args, args)},
         )
@@ -205,6 +196,8 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
         # making the request_kwargs ####################################################################################
         _request_kwargs = dict(**request_kwargs)  # to make a copy
+        content_type = method_spec.get('content_type', 'text/plain')
+        _request_kwargs['headers'] = {'Content-Type': content_type}
         url = None
         if 'url_template' in method_spec:
             url_template = method_spec['url_template']
@@ -227,14 +220,20 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         elif 'url' in method_spec:
             url = method_spec['url']
 
-        json = {k: v for k, v in kwargs.items() if is_jsonable(v)}
-        _request_kwargs['json'] = json
-        remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json}
-        if remaining_kwargs:
-            req_param_key = get_req_param_key()
-            _request_kwargs[req_param_key] = {
-                k: v for k, v in remaining_kwargs.items() if k in body_arg_names
-            }
+        if content_type == 'multipart/form-data':
+            json = {k: v for k, v in kwargs.items() if is_jsonable(v)}
+            if json:
+                _request_kwargs['json'] = json
+            remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json}
+            if remaining_kwargs:
+                files = {
+                    k: v for k, v in remaining_kwargs.items() if k in body_arg_names
+                }
+                if files:
+                    _request_kwargs['files'] = files
+        elif kwargs:
+            param_key = 'json' if content_type == 'application/json' else 'data'
+            _request_kwargs[param_key] = kwargs
 
         if debug is not None:
             if debug == 'print_request_kwargs':
