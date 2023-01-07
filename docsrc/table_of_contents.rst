@@ -7,6 +7,7 @@
    module_docs/http2py/authentication
    module_docs/http2py/cli_maker
    module_docs/http2py/client
+   module_docs/http2py/constants
    module_docs/http2py/decorators
    module_docs/http2py/default_configs
    module_docs/http2py/example_cli

@@ -41,7 +41,12 @@ import urllib
 # import io
 import re
 from typing import Any, Union
-from http2py.constants import BINARY_CONTENT_TYPE, FORM_CONTENT_TYPE, JSON_CONTENT_TYPE, RAW_CONTENT_TYPE
+from http2py.constants import (
+    BINARY_CONTENT_TYPE,
+    FORM_CONTENT_TYPE,
+    JSON_CONTENT_TYPE,
+    RAW_CONTENT_TYPE,
+)
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
 from http2py.default_configs import (
@@ -228,20 +233,16 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         binary_kwargs = {k: v for k, v in kwargs.items() if k not in json_kwargs}
         if content_type in (JSON_CONTENT_TYPE, RAW_CONTENT_TYPE):
             if binary_kwargs:
-                raise RuntimeError(f'Some of the inputs are not JSON-serializable, impossible to send them over an {content_type} request.')
+                raise RuntimeError(
+                    f'Some of the inputs are not JSON-serializable, impossible to send them over an {content_type} request.'
+                )
             _request_kwargs['data'] = json.dumps(json_kwargs)
         elif content_type == BINARY_CONTENT_TYPE:
             _request_kwargs['data'] = pickle.dumps(kwargs)
         elif content_type == FORM_CONTENT_TYPE:
             fields = json.dumps(json_kwargs).encode('utf-8')
-            binaries = {
-                k: (f'{k}.bin', v)
-                for k, v in binary_kwargs.items()
-            }
-            files_data = dict(
-                binaries,
-                __fields=fields
-            )
+            binaries = {k: (f'{k}.bin', v) for k, v in binary_kwargs.items()}
+            files_data = dict(binaries, __fields=fields)
             _request_kwargs['files'] = files_data
 
         if debug is not None:

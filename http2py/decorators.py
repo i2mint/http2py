@@ -36,7 +36,9 @@ def _handle_resp(func, content_type):
             elif content_type == RAW_CONTENT_TYPE:
                 output = resp.text
             else:
-                raise NotImplementedError(f'Response of type {content_type} is not supported yet.')
+                raise NotImplementedError(
+                    f'Response of type {content_type} is not supported yet.'
+                )
             return func(output)
         else:
             _handle_error(resp)
