@@ -31,6 +31,8 @@ There must be a better way...
 """
 from functools import wraps
 from inspect import signature, Parameter
+import json
+import pickle
 from glom import glom
 from requests import request
 import string
@@ -39,12 +41,13 @@ import urllib
 # import io
 import re
 from typing import Any, Union
+from http2py.constants import BINARY_CONTENT_TYPE, FORM_CONTENT_TYPE, JSON_CONTENT_TYPE, RAW_CONTENT_TYPE
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
 from http2py.default_configs import (
     default_json_output_trans,
     default_text_output_trans,
-    default_content_output_trans,
+    default_binary_output_trans,
 )
 
 with I2mintModuleNotFoundErrorNiceMessage():
@@ -53,7 +56,7 @@ with I2mintModuleNotFoundErrorNiceMessage():
 
 DFLT_PORT = 5000
 DFLT_BASE_URL = 'http://localhost:{port}'.format(port=DFLT_PORT)
-DFLT_REQUEST_METHOD = 'GET'
+DFLT_REQUEST_METHOD = 'post'
 DFLT_REQUEST_KWARGS = imdict({'method': DFLT_REQUEST_METHOD, 'url': ''})
 
 pytype_for_oatype = {
@@ -173,13 +176,13 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
     output_trans = method_spec.pop('output_trans', None)
     if output_trans is None:
-        response_type = method_spec.get('response_type', 'text/plain')
-        if response_type == 'text/plain':
+        response_type = method_spec.get('response_type', RAW_CONTENT_TYPE)
+        if response_type == RAW_CONTENT_TYPE:
             output_trans = default_text_output_trans
-        if response_type == 'application/json':
+        elif response_type == JSON_CONTENT_TYPE:
             output_trans = default_json_output_trans
         else:
-            output_trans = default_content_output_trans
+            output_trans = default_binary_output_trans
 
     wraps_func = method_spec.pop('wraps', None)
 
@@ -196,8 +199,9 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
 
         # making the request_kwargs ####################################################################################
         _request_kwargs = dict(**request_kwargs)  # to make a copy
-        content_type = method_spec.get('content_type', 'text/plain')
-        _request_kwargs['headers'] = {'Content-Type': content_type}
+        content_type = method_spec.get('content_type', RAW_CONTENT_TYPE)
+        if content_type != FORM_CONTENT_TYPE:
+            _request_kwargs['headers'] = {'Content-Type': content_type}
         url = None
         if 'url_template' in method_spec:
             url_template = method_spec['url_template']
@@ -220,20 +224,25 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
         elif 'url' in method_spec:
             url = method_spec['url']
 
-        if content_type == 'multipart/form-data':
-            json = {k: v for k, v in kwargs.items() if is_jsonable(v)}
-            if json:
-                _request_kwargs['json'] = json
-            remaining_kwargs = {k: v for k, v in kwargs.items() if k not in json}
-            if remaining_kwargs:
-                files = {
-                    k: v for k, v in remaining_kwargs.items() if k in body_arg_names
-                }
-                if files:
-                    _request_kwargs['files'] = files
-        elif kwargs:
-            param_key = 'json' if content_type == 'application/json' else 'data'
-            _request_kwargs[param_key] = kwargs
+        json_kwargs = {k: v for k, v in kwargs.items() if is_jsonable(v)}
+        binary_kwargs = {k: v for k, v in kwargs.items() if k not in json_kwargs}
+        if content_type in (JSON_CONTENT_TYPE, RAW_CONTENT_TYPE):
+            if binary_kwargs:
+                raise RuntimeError(f'Some of the inputs are not JSON-serializable, impossible to send them over an {content_type} request.')
+            _request_kwargs['data'] = json.dumps(json_kwargs)
+        elif content_type == BINARY_CONTENT_TYPE:
+            _request_kwargs['data'] = pickle.dumps(kwargs)
+        elif content_type == FORM_CONTENT_TYPE:
+            fields = json.dumps(json_kwargs).encode('utf-8')
+            binaries = {
+                k: (f'{k}.bin', v)
+                for k, v in binary_kwargs.items()
+            }
+            files_data = dict(
+                binaries,
+                __fields=fields
+            )
+            _request_kwargs['files'] = files_data
 
         if debug is not None:
             if debug == 'print_request_kwargs':
@@ -241,10 +250,10 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
             elif debug == 'return_request_kwargs':
                 return _request_kwargs
 
-        r = dispatch(method, url, **_request_kwargs)
+        response = dispatch(method, url, **_request_kwargs)
         if callable(output_trans):
-            return output_trans(r)
-        return r
+            return output_trans(response)
+        return response
 
     if function_kind == 'method':
         _request_func = request_func
@@ -493,7 +502,7 @@ def mk_method_spec_from_openapi_method_spec(
     openapi_method_spec,
     method='post',
     url_template='',
-    content_type='application/json',
+    content_type=JSON_CONTENT_TYPE,
     input_trans=None,
     output_trans=None,
 ):
@@ -594,7 +603,7 @@ def add_annots_from_openapi_props(func, openapi_props):
 #     t = t.get('post', t.get('get', None))  # make more robust
 #     assert t is not None
 #     # TODO: glommify
-#     return t['requestBody']['content']['application/json']['schema']['properties']
+#     return t['requestBody']['content'][JSON_CONTENT_TYPE]['schema']['properties']
 
 
 def _get_path_spec(path, openapi_spec):
@@ -605,7 +614,7 @@ def mk_request_func_from_openapi_spec(
     path,
     openapi_spec,
     method='post',
-    content_type='application/json',
+    content_type=JSON_CONTENT_TYPE,
     input_trans=None,
     output_trans=None,
 ):

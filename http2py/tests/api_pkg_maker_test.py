@@ -2,6 +2,7 @@ import os
 import re
 import pytest
 from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
+from http2py.constants import JSON_CONTENT_TYPE
 
 
 @pytest.mark.parametrize(
@@ -20,7 +21,7 @@ from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
                             'requestBody': {
                                 'required': True,
                                 'content': {
-                                    'application/json': {
+                                    JSON_CONTENT_TYPE: {
                                         'schema': {
                                             'type': 'object',
                                             'properties': {
@@ -35,7 +36,7 @@ from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
                             'responses': {
                                 '200': {
                                     'description': '',
-                                    'content': {'application/json': {'schema': {}}},
+                                    'content': {JSON_CONTENT_TYPE: {'schema': {}}},
                                 }
                             },
                         }
@@ -47,7 +48,7 @@ from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
                             'requestBody': {
                                 'required': True,
                                 'content': {
-                                    'application/json': {
+                                    JSON_CONTENT_TYPE: {
                                         'schema': {
                                             'type': 'object',
                                             'properties': {
@@ -65,7 +66,7 @@ from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
                             'responses': {
                                 '200': {
                                     'description': '',
-                                    'content': {'application/json': {'schema': {}}},
+                                    'content': {JSON_CONTENT_TYPE: {'schema': {}}},
                                 }
                             },
                         }
@@ -77,7 +78,7 @@ from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
                             'requestBody': {
                                 'required': True,
                                 'content': {
-                                    'application/json': {
+                                    JSON_CONTENT_TYPE: {
                                         'schema': {
                                             'type': 'object',
                                             'properties': {
@@ -95,7 +96,7 @@ from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
                             'responses': {
                                 '200': {
                                     'description': '',
-                                    'content': {'application/json': {'schema': {}}},
+                                    'content': {JSON_CONTENT_TYPE: {'schema': {}}},
                                 }
                             },
                         }
