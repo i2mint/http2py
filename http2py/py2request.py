@@ -121,7 +121,9 @@ def mk_param_spec_from_arg_schema(arg, required=False):
     return spec_dict
 
 
-def mk_request_function(method_spec, *, function_kind='method', dispatch=request, verify_cert=True):
+def mk_request_function(
+    method_spec, *, function_kind='method', dispatch=request, verify_cert=True
+):
     """
     Makes function that will make http requests for you, on your own terms.
 

@@ -117,7 +117,9 @@ class HttpClient:
             url_template=url_template,
             content_type=content_type,
         )
-        func = mk_request_function(method_spec, dispatch=self.handle_request, verify_cert=self.verify_cert)
+        func = mk_request_function(
+            method_spec, dispatch=self.handle_request, verify_cert=self.verify_cert
+        )
         func.method_spec = method_spec
         func.content_type = content_type
         funcname = func.__name__
