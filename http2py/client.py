@@ -27,17 +27,20 @@ class HttpClient:
     def __init__(
         self,
         openapi_spec=None,
-        session_state=None,
         url=None,
+        session_state=None,
         base_url=None,
+        verify_cert=True,
         **auth_kwargs,
     ):
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
         :param openapi_spec: A server specification in OpenAPI format
+        :param url: The url to fetch the OpenAPI specification. It will overwrite `openapi_spec` if provided.
         :param session: A session for HTTP requests
         :param base_url: A base url to enforce if you don't want to take the base url from the OpenAPI spec
+        :param verify_cert: If True, it verifies the SSL certificate validity for each https request.
 
         :Keyword Arguments:
             * *api_key*
@@ -46,8 +49,9 @@ class HttpClient:
               Input values to be passed to the login url, if using bearer auth
 
         """
+        self.verify_cert = verify_cert
         if url and not openapi_spec:
-            openapi_spec = get(url).json()
+            openapi_spec = get(url, verify=self.verify_cert).json()
         self.openapi_spec = openapi_spec
         server_info = openapi_spec['info']
         self.title = server_info['title']
@@ -113,7 +117,7 @@ class HttpClient:
             url_template=url_template,
             content_type=content_type,
         )
-        func = mk_request_function(method_spec, dispatch=self.handle_request)
+        func = mk_request_function(method_spec, dispatch=self.handle_request, verify_cert=self.verify_cert)
         func.method_spec = method_spec
         func.content_type = content_type
         funcname = func.__name__

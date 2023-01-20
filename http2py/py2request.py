@@ -121,7 +121,7 @@ def mk_param_spec_from_arg_schema(arg, required=False):
     return spec_dict
 
 
-def mk_request_function(method_spec, *, function_kind='method', dispatch=request):
+def mk_request_function(method_spec, *, function_kind='method', dispatch=request, verify_cert=True):
     """
     Makes function that will make http requests for you, on your own terms.
 
@@ -203,7 +203,7 @@ def mk_request_function(method_spec, *, function_kind='method', dispatch=request
                 kwargs[arg_name] = converter(kwargs[arg_name])
 
         # making the request_kwargs ####################################################################################
-        _request_kwargs = dict(**request_kwargs)  # to make a copy
+        _request_kwargs = dict(**request_kwargs, verify=verify_cert)  # to make a copy
         content_type = method_spec.get('content_type', RAW_CONTENT_TYPE)
         if content_type != FORM_CONTENT_TYPE:
             _request_kwargs['headers'] = {'Content-Type': content_type}
