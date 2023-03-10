@@ -22,7 +22,9 @@ def ws_app():
 
     with run_process(
         func=run_app,
-        func_kwargs=dict(app_obj=[foo, bar, confuser], publish_openapi=True, server='wsgiref'),
+        func_kwargs=dict(
+            app_obj=[foo, bar, confuser], publish_openapi=True, server='wsgiref'
+        ),
         is_ready=3,
     ) as proc:
         yield proc
