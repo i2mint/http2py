@@ -616,10 +616,10 @@ def mk_method_spec_from_openapi_method_spec(
         )
         for argname, details in body_properties.items():
             body_arg_names.append(argname)
-            argtype = details["type"]
             # TODO: fully support typed dict and typed iterable types
             arg_spec = {"name": argname}
-            pytype = pytype_for_oatype[argtype]
+            argtype = details.get("type", None)
+            pytype = pytype_for_oatype.get(argtype, None)
             if pytype:
                 arg_spec["type"] = pytype
             if "default" in details:
