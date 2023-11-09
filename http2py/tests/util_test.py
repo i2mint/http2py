@@ -134,7 +134,7 @@ def test_routes(openapi_spec):
         }
     }
 
-    assert post_route.parameters == [
-        {'in': 'body', 'name': 'name', 'schema': {'type': 'string'}},
-        {'in': 'body', 'name': 'age', 'schema': {'type': 'integer', 'default': 42}},
+    assert post_route.params == [
+        {'in': 'requestBody', 'name': 'name', 'schema': {'type': 'string'}},
+        {'in': 'requestBody', 'name': 'age', 'schema': {'type': 'integer', 'default': 42}},
     ]

@@ -156,9 +156,13 @@ class Route:
         return self.method_data.get('responses', {})
 
     @cached_property
-    def parameters(self):
+    def params(self):
+        """Combined parameters from parameters and requestBody
+        (it should usually just be one or the other, not both).
+        We're calling this 'params' because that's what FastAPI calls it.
+        """
         # Start with the parameters defined in the 'parameters' section
-        params = self.method_data.get('parameters', [])
+        p = self.method_data.get('parameters', [])
 
         # Check if requestBody is defined and has content with a JSON content type
         request_body = self.method_data.get('requestBody', {})
@@ -168,12 +172,12 @@ class Route:
         if 'schema' in content:
             schema_props = content['schema'].get('properties', {})
             for name, details in schema_props.items():
-                params.append(
+                p.append(
                     {
-                        'in': 'body',  # or 'in': 'requestBody', if that makes more sense in your context
+                        'in': 'requestBody',
                         'name': name,
                         'schema': details,
                     }
                 )
 
-        return params
+        return p
