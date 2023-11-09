@@ -17,4 +17,5 @@
    module_docs/http2py/testing_utils
    module_docs/http2py/tests/api_pkg_maker_test
    module_docs/http2py/tests/conftest
+   module_docs/http2py/tests/util_test
    module_docs/http2py/util
