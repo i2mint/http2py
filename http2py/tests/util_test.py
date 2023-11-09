@@ -4,8 +4,8 @@ import yaml
 import pytest
 from http2py.util import files, get_routes, Routes
 
-test_data_path = files / "tests" / "test_data"
-simple_openapi_spec_path = test_data_path / "simple_openapi_spec.yaml"
+test_data_path = files / 'tests' / 'test_data'
+simple_openapi_spec_path = test_data_path / 'simple_openapi_spec.yaml'
 
 
 def _openapi_spec():

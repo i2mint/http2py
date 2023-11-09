@@ -9,7 +9,7 @@ except AttributeError:
 
     _files = importlib_resources.files
 
-files = _files("http2py")
+files = _files('http2py')
 
 
 def add_defaults(d, dflts):
@@ -80,7 +80,7 @@ def get_routes(d: Dict[str, Any], include_methods=tuple(http_methods)) -> Iterab
     """
     if isinstance(include_methods, str):
         include_methods = {include_methods}
-    for endpoint in (paths := d.get('paths', {})):
+    for endpoint in (paths := d.get('paths', {})) :
         for method in paths[endpoint]:
             if method in include_methods:
                 yield method, endpoint
@@ -88,12 +88,12 @@ def get_routes(d: Dict[str, Any], include_methods=tuple(http_methods)) -> Iterab
 
 dflt_type_mapping = tuple(
     {
-        "array": list,
-        "integer": int,
-        "object": dict,
-        "string": str,
-        "boolean": bool,
-        "number": float,
+        'array': list,
+        'integer': int,
+        'object': dict,
+        'string': str,
+        'boolean': bool,
+        'number': float,
     }.items()
 )
 
