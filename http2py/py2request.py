@@ -168,6 +168,11 @@ def mk_request_function(
         That argument is ignored.
 
     """
+    if isinstance(method_spec, str):
+        # If method_spec is a string, assume it's a url_template with a get method
+        # like 'http://myapi.com/search?q={search_term}'
+        return getattr(Py2Request({'func': method_spec}), 'func')
+    
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
     method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
