@@ -29,6 +29,7 @@ Are you enjoying yourself?
 
 There must be a better way...
 """
+
 from functools import wraps
 from inspect import signature, Parameter
 import json
@@ -43,6 +44,7 @@ import re
 from typing import Any, Union
 
 from i2 import Sig
+from ju.json_schema import json_schema_to_signature
 
 from http2py.constants import (
     BINARY_CONTENT_TYPE,
@@ -207,7 +209,8 @@ def mk_request_function(
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
         kwargs = dict(
-            kwargs, **{argname: argval for argname, argval in zip(func_args, args)},
+            kwargs,
+            **{argname: argval for argname, argval in zip(func_args, args)},
         )
 
         # convert argument types TODO: Not efficient. Might could be revised.
@@ -545,7 +548,8 @@ class UrlMethodSpecsMaker:
             # assert the general case where url query (key) and arg (val) names are different
             assert isinstance(url_queries, dict), 'url_queries should be a dict'
             url_queries = dict(
-                self.constant_url_query, **dict(url_queries, **more_url_queries),
+                self.constant_url_query,
+                **dict(url_queries, **more_url_queries),
             )
             url_template += '?' + '&'.join(
                 map(lambda kv: f'{kv[0]}={{{kv[1]}}}', url_queries.items())
@@ -681,6 +685,9 @@ def add_annots_from_openapi_props(func, openapi_props):
 #     # TODO: glommify
 #     return t['requestBody']['content'][JSON_CONTENT_TYPE]['schema']['properties']
 
+# --------------------------------------------------------------------------------------
+# OpenAPI to request function conversion
+
 
 def _get_path_spec(path, openapi_spec):
     return openapi_spec['paths'][path]
@@ -689,6 +696,7 @@ def _get_path_spec(path, openapi_spec):
 def mk_request_func_from_openapi_spec(
     path,
     openapi_spec,
+    *,
     method='post',
     content_type=JSON_CONTENT_TYPE,
     input_trans=None,
@@ -711,7 +719,11 @@ def mk_request_func_from_openapi_spec(
     )
 
     func = mk_request_function(method_spec, function_kind='function')
-    openapi_props = glom(spec, f'requestBody.content.{content_type}.schema.properties')
+    openapi_props = glom(
+        spec, f'requestBody.content.{content_type}.schema.properties', default={}
+    )
+    # Try to use ju.json_schema_to_signature for better function signatures
+    json_schema = glom(spec, f'requestBody.content.{content_type}.schema', default=None)
     try:
         _, func_name = path.split('/')  # fragile way of getting the name
     except Exception:
@@ -720,6 +732,16 @@ def mk_request_func_from_openapi_spec(
     if 'x-func' in spec:
         original_func = spec['x-func']
         func.__signature__ = signature(original_func)
+    elif (
+        json_schema
+        and isinstance(json_schema, dict)
+        and json_schema.get('type') == 'object'
+        and 'properties' in json_schema
+    ):
+        try:
+            func.__signature__ = json_schema_to_signature(json_schema)
+        except Exception:
+            func = add_annots_from_openapi_props(func, openapi_props)
     else:
         func = add_annots_from_openapi_props(func, openapi_props)
     func.path = path
@@ -731,6 +753,54 @@ def mk_request_func_from_openapi_spec(
 
 
 mk_request_function.from_openapi_spec = mk_request_func_from_openapi_spec
+
+
+from typing import Optional, Iterable, Dict, Tuple, Callable
+from ju.oas import Routes
+from http2py.py2request import mk_request_func_from_openapi_spec
+
+
+def default_path_to_func_name(method: str, uri: str) -> str:
+    # Remove leading slash, replace non-alphanum with underscores, collapse repeats, strip
+    import re
+
+    name = f"{method}_{uri.lstrip('/')}"
+    name = re.sub(r'[^0-9a-zA-Z_]', '_', name)
+    name = re.sub(r'_+', '_', name)
+    name = name.strip('_')
+    return name
+
+
+def openapi_to_py(
+    openapi_spec: dict,
+    paths: Optional[Iterable[Tuple[str, str]]] = None,
+    *,
+    path_to_func_name: Callable[[str, str], str] = default_path_to_func_name,
+    servers: Optional[list] = None,
+    default_server_url: str = 'http://localhost:8000',
+) -> Dict[str, Callable]:
+    """
+    Given an OpenAPI spec dict, returns a dict mapping function names to request functions.
+    The `servers` argument overrides or provides a default for the OpenAPI servers field.
+    """
+    # Patch the spec with servers if needed
+    patched_spec = dict(openapi_spec)
+    if servers is not None:
+        if isinstance(servers, str):
+            servers = [{'url': servers}]
+        patched_spec['servers'] = servers
+    elif 'servers' not in patched_spec:
+        patched_spec['servers'] = [{'url': default_server_url}]
+
+    if paths is None:
+        paths = list(Routes(patched_spec))
+    result = {}
+    for method, uri in paths:
+        func_name = path_to_func_name(method, uri)
+        func = mk_request_func_from_openapi_spec(uri, patched_spec, method=method)
+        result[func_name] = func
+    return result
+
 
 # def mk_request_method(method_spec):
 #     """
