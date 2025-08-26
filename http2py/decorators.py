@@ -13,11 +13,11 @@ from http2py.constants import BINARY_CONTENT_TYPE, JSON_CONTENT_TYPE, RAW_CONTEN
 
 def _handle_error(resp):
     if resp.status_code == 400:
-        if resp.reason == 'AuthorizationError':
+        if resp.reason == "AuthorizationError":
             raise AuthorizationError(resp.text)
-        if resp.reason == 'InputError':
+        if resp.reason == "InputError":
             raise InputError(resp.text)
-        if resp.reason == 'DuplicateRecordError':
+        if resp.reason == "DuplicateRecordError":
             raise DuplicateRecordError(resp.text)
     if resp.status_code == 403:
         raise ForbiddenError(resp.text)
@@ -37,7 +37,7 @@ def _handle_resp(func, content_type):
                 output = resp.text
             else:
                 raise NotImplementedError(
-                    f'Response of type {content_type} is not supported yet.'
+                    f"Response of type {content_type} is not supported yet."
                 )
             return func(output)
         else:

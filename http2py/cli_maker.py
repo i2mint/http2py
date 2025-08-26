@@ -19,16 +19,17 @@ def mk_sig_argparse_friendly(sig):
     """Modifies a signature to change all leading underscores in param names
     to trailing underscores, to ensure compatibility with argparse"""
     for argname, argspec in sig.parameters.items():
-        if argname.startswith('_'):
-            argname = argname[1:] + '_'
+        if argname.startswith("_"):
+            argname = argname[1:] + "_"
             argspec = argspec.replace(name=argname)
-            assert argname not in sig.names, f'{argname} was already in {sig.names}'
+            assert argname not in sig.names, f"{argname} was already in {sig.names}"
         yield argname, argspec
 
 
 def mk_argparse_friendly(func):
     """Wraps a function to expose a signature that is compatible with argparse by stripping leading
-    underscores from all keyword arguments, but does not mutate the signature of the original function"""
+    underscores from all keyword arguments, but does not mutate the signature of the original function
+    """
     orig_sig = Sig(func)
     new_params = dict(mk_sig_argparse_friendly(orig_sig))
     new_sig = orig_sig.replace(
@@ -40,7 +41,7 @@ def mk_argparse_friendly(func):
         mapped_kwargs = {}
         for argname, argvalue in kwargs.items():
             if argname not in [param.name for param in orig_sig.params]:
-                mapped_argname = '_' + argname[:-1]
+                mapped_argname = "_" + argname[:-1]
             else:
                 mapped_argname = argname
             mapped_kwargs[mapped_argname] = argvalue
@@ -52,9 +53,9 @@ def mk_argparse_friendly(func):
 
 
 def mk_cli(
-    openapi_spec: dict = '',
-    url: str = '',
-    filename: str = '',
+    openapi_spec: dict = "",
+    url: str = "",
+    filename: str = "",
     parse_yaml: bool = False,
     config_filename: str = DFLT_CONFIG_FILENAME,
 ):
@@ -75,32 +76,32 @@ def mk_cli(
             with open(filename) as fp:
                 raw_spec = fp.read()
         else:
-            raise ValueError('You must provide an OpenAPI spec dict, url, or filename.')
+            raise ValueError("You must provide an OpenAPI spec dict, url, or filename.")
         if raw_spec:
             if parse_yaml:
                 openapi_spec = yaml.safe_load(raw_spec)
             else:
                 openapi_spec = json.loads(raw_spec)
         else:
-            raise ValueError('No valid OpenAPI spec found.')
-    security = openapi_spec.get('security', None)
+            raise ValueError("No valid OpenAPI spec found.")
+    security = openapi_spec.get("security", None)
     expected_auth_kwargs = []
     if security:
         auth_type = list(security.keys())[0]
-        if auth_type == 'apiKey':
-            expected_auth_kwargs = ['api_key']
-        elif auth_type == 'bearerAuth':
+        if auth_type == "apiKey":
+            expected_auth_kwargs = ["api_key"]
+        elif auth_type == "bearerAuth":
             login_details = glom(
                 openapi_spec,
-                'components.securitySchemes.bearerAuth.x-login',
+                "components.securitySchemes.bearerAuth.x-login",
                 default={},
             )
-            expected_auth_kwargs = login_details.get('login_inputs', [])
+            expected_auth_kwargs = login_details.get("login_inputs", [])
     client_details = HttpClient(openapi_spec)
     cli_methods = [
         register_cli_method(openapi_spec, method, expected_auth_kwargs)
         for methodname, method in client_details.__dict__.items()
-        if getattr(method, 'method_spec', None)
+        if getattr(method, "method_spec", None)
     ]
     parser = argh.ArghParser()
     parser.add_commands(cli_methods)
@@ -121,7 +122,7 @@ def register_cli_method(
     client_method: Callable,
     expected_auth_kwargs: Iterable[str] = None,
     config_filename: str = DFLT_CONFIG_FILENAME,
-    profile: str = '',
+    profile: str = "",
 ):
     """Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
     arguments and call a particular method of the client instance
@@ -141,15 +142,15 @@ def register_cli_method(
     method_sig = method_sig.merge_with_sig(
         [
             *[
-                {'name': kwarg, 'kind': KO, 'default': ''}
+                {"name": kwarg, "kind": KO, "default": ""}
                 for kwarg in expected_auth_kwargs
             ],
-            {'name': 'config', 'kind': KO, 'default': config_filename},
+            {"name": "config", "kind": KO, "default": config_filename},
         ]
     )
 
     def cli_method(*args, **kwargs):
-        config_filename = kwargs.pop('config')
+        config_filename = kwargs.pop("config")
         auth_kwargs = {key: kwargs.pop(key) for key in expected_auth_kwargs}
         auth_kwargs = mk_auth(
             auth_kwargs, expected_auth_kwargs, config_filename, profile

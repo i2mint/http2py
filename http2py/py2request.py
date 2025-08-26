@@ -66,18 +66,18 @@ with I2mintModuleNotFoundErrorNiceMessage():
     from i2.signatures import set_signature_of_func, KO
 
 DFLT_PORT = 5000
-DFLT_BASE_URL = 'http://localhost:{port}'.format(port=DFLT_PORT)
-DFLT_REQUEST_METHOD = 'post'
-DFLT_REQUEST_KWARGS = imdict({'method': DFLT_REQUEST_METHOD, 'url': ''})
+DFLT_BASE_URL = "http://localhost:{port}".format(port=DFLT_PORT)
+DFLT_REQUEST_METHOD = "post"
+DFLT_REQUEST_KWARGS = imdict({"method": DFLT_REQUEST_METHOD, "url": ""})
 
 pytype_for_oatype = {
-    'string': str,
-    'number': float,
-    'integer': int,
-    'array': list,
-    'object': dict,
-    'boolean': bool,
-    '{}': None,
+    "string": str,
+    "number": float,
+    "integer": int,
+    "array": list,
+    "object": dict,
+    "boolean": bool,
+    "{}": None,
 }
 
 
@@ -86,8 +86,8 @@ def identity_func(x):
 
 
 class DebugOptions:
-    print_request_kwargs = 'print_request_kwargs'
-    return_request_kwargs = 'return_request_kwargs'
+    print_request_kwargs = "print_request_kwargs"
+    return_request_kwargs = "return_request_kwargs"
 
 
 def mk_default_completion_validator(dflt_kwargs=DFLT_REQUEST_KWARGS):
@@ -98,7 +98,7 @@ def mk_default_completion_validator(dflt_kwargs=DFLT_REQUEST_KWARGS):
 
 
 def all_necessary_fields_validator(kwargs):
-    assert 'method' in kwargs and 'url' in kwargs, 'Need both a method and a url field!'
+    assert "method" in kwargs and "url" in kwargs, "Need both a method and a url field!"
     return kwargs
 
 
@@ -110,27 +110,27 @@ def _ensure_list(x):
 
 def mk_param_spec_from_arg_schema(arg, required=False):
     spec_dict = {
-        'name': arg['name'],
+        "name": arg["name"],
     }
-    if 'default' in arg:
-        spec_dict['default'] = arg['default']
-    elif not arg.get('required', required):
-        spec_dict['default'] = None
+    if "default" in arg:
+        spec_dict["default"] = arg["default"]
+    elif not arg.get("required", required):
+        spec_dict["default"] = None
     else:
-        spec_dict['default'] = Parameter.empty
-    if 'type' in arg:
-        spec_dict['annotation'] = arg['type']
-    if 'kind' in arg:
-        spec_dict['kind'] = arg['kind']
+        spec_dict["default"] = Parameter.empty
+    if "type" in arg:
+        spec_dict["annotation"] = arg["type"]
+    if "kind" in arg:
+        spec_dict["kind"] = arg["kind"]
     else:
-        spec_dict['kind'] = KO
+        spec_dict["kind"] = KO
     return spec_dict
 
 
 # TODO: Deprecated output_trans in favor of egress, for consistency with other i2imint?
 # TODO: Use method_spec object that has more schema, signature, and validation.
 def mk_request_function(
-    method_spec, *, function_kind='method', dispatch=request, verify_cert=True
+    method_spec, *, function_kind="method", dispatch=request, verify_cert=True
 ):
     """
     Makes function that will make http requests for you, on your own terms.
@@ -173,30 +173,30 @@ def mk_request_function(
     if isinstance(method_spec, str):
         # If method_spec is a string, assume it's a url_template with a get method
         # like 'http://myapi.com/search?q={search_term}'
-        return getattr(Py2Request({'func': method_spec}), 'func')
+        return getattr(Py2Request({"func": method_spec}), "func")
 
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
-    method_spec['input_trans'] = method_spec.get('input_trans', None) or {}
+    method_spec["input_trans"] = method_spec.get("input_trans", None) or {}
 
-    request_kwargs = method_spec.get('request_kwargs', {}).copy()
+    request_kwargs = method_spec.get("request_kwargs", {}).copy()
     method = method_spec.pop(
-        'method', request_kwargs.pop('method', DFLT_REQUEST_METHOD)
+        "method", request_kwargs.pop("method", DFLT_REQUEST_METHOD)
     )
-    path_arg_names = _ensure_list(method_spec.get('path_arg_names', []))
-    query_arg_names = _ensure_list(method_spec.get('query_arg_names', []))
-    body_arg_names = _ensure_list(method_spec.get('body_arg_names', []))
-    arg_specs = method_spec.get('arg_specs', [])
+    path_arg_names = _ensure_list(method_spec.get("path_arg_names", []))
+    query_arg_names = _ensure_list(method_spec.get("query_arg_names", []))
+    body_arg_names = _ensure_list(method_spec.get("body_arg_names", []))
+    arg_specs = method_spec.get("arg_specs", [])
     formatted_arg_specs = [mk_param_spec_from_arg_schema(arg) for arg in arg_specs]
     func_args = list(path_arg_names) + list(query_arg_names) + list(body_arg_names)
 
-    debug = method_spec.pop('debug', None)
-    if 'debug' in method_spec:
-        debug = method_spec['debug']
+    debug = method_spec.pop("debug", None)
+    if "debug" in method_spec:
+        debug = method_spec["debug"]
 
-    output_trans = method_spec.pop('output_trans', None)
+    output_trans = method_spec.pop("output_trans", None)
     if output_trans is None:
-        response_type = method_spec.get('response_type', RAW_CONTENT_TYPE)
+        response_type = method_spec.get("response_type", RAW_CONTENT_TYPE)
         if response_type == RAW_CONTENT_TYPE:
             output_trans = default_text_output_trans
         elif response_type == JSON_CONTENT_TYPE:
@@ -204,7 +204,7 @@ def mk_request_function(
         else:
             output_trans = default_binary_output_trans
 
-    wraps_func = method_spec.pop('wraps', None)
+    wraps_func = method_spec.pop("wraps", None)
 
     # TODO: inject a signature, and possibly a __doc__ in this function
     def request_func(*args, **kwargs):
@@ -214,31 +214,31 @@ def mk_request_function(
         )
 
         # convert argument types TODO: Not efficient. Might could be revised.
-        for arg_name, converter in method_spec.get('input_trans', {}).items():
+        for arg_name, converter in method_spec.get("input_trans", {}).items():
             if arg_name in kwargs:
                 kwargs[arg_name] = converter(kwargs[arg_name])
 
         # making the request_kwargs ####################################################################################
         _request_kwargs = dict(**request_kwargs, verify=verify_cert)  # to make a copy
-        content_type = method_spec.get('content_type', RAW_CONTENT_TYPE)
+        content_type = method_spec.get("content_type", RAW_CONTENT_TYPE)
         if content_type != FORM_CONTENT_TYPE:
-            _request_kwargs['headers'] = {'Content-Type': content_type}
+            _request_kwargs["headers"] = {"Content-Type": content_type}
         url = None
-        if 'url_template' in method_spec:
-            url_template = method_spec['url_template']
+        if "url_template" in method_spec:
+            url_template = method_spec["url_template"]
             # Check if the url template already has parameters, add them otherwise
-            if query_arg_names and not re.search('^.*\?((.*=.*)(&?))+$', url_template):
-                url_arg_parts = [f'{x}={{{x}}}' for x in query_arg_names if x in kwargs]
-                url_args = '&'.join(url_arg_parts)
+            if query_arg_names and not re.search("^.*\?((.*=.*)(&?))+$", url_template):
+                url_arg_parts = [f"{x}={{{x}}}" for x in query_arg_names if x in kwargs]
+                url_args = "&".join(url_arg_parts)
                 if url_args:
-                    url_template += f'?{url_args}'
+                    url_template += f"?{url_args}"
             param_kwargs = {
                 k: v
                 for k, v in kwargs.items()
                 if k in path_arg_names or k in query_arg_names
             }
             encoded_kwargs = {
-                k: urllib.parse.quote(v, safe='') if type(v) is str else v
+                k: urllib.parse.quote(v, safe="") if type(v) is str else v
                 for k, v in param_kwargs.items()
             }
             # TODO: Added this _kwargs_for_url_template to get kwargs, because
@@ -248,30 +248,30 @@ def mk_request_function(
             #  function is a mess and should be revised
             _kwargs_for_url_template = dict(kwargs, **encoded_kwargs)
             url = url_template.format(**_kwargs_for_url_template)
-        elif 'url' in method_spec:
-            url = method_spec['url']
+        elif "url" in method_spec:
+            url = method_spec["url"]
 
         json_kwargs = {k: v for k, v in kwargs.items() if is_jsonable(v)}
         binary_kwargs = {k: v for k, v in kwargs.items() if k not in json_kwargs}
-        if method != 'GET':  # problem needing this arose when adding method sigs
+        if method != "GET":  # problem needing this arose when adding method sigs
             if content_type in (JSON_CONTENT_TYPE, RAW_CONTENT_TYPE):
                 if binary_kwargs:
                     raise RuntimeError(
-                        f'Some of the inputs are not JSON-serializable, impossible to send them over an {content_type} request.'
+                        f"Some of the inputs are not JSON-serializable, impossible to send them over an {content_type} request."
                     )
-                _request_kwargs['data'] = json.dumps(json_kwargs)
+                _request_kwargs["data"] = json.dumps(json_kwargs)
             elif content_type == BINARY_CONTENT_TYPE:
-                _request_kwargs['data'] = pickle.dumps(kwargs)
+                _request_kwargs["data"] = pickle.dumps(kwargs)
         elif content_type == FORM_CONTENT_TYPE:
-            fields = json.dumps(json_kwargs).encode('utf-8')
-            binaries = {k: (f'{k}.bin', v) for k, v in binary_kwargs.items()}
+            fields = json.dumps(json_kwargs).encode("utf-8")
+            binaries = {k: (f"{k}.bin", v) for k, v in binary_kwargs.items()}
             files_data = dict(binaries, __fields=fields)
-            _request_kwargs['files'] = files_data
+            _request_kwargs["files"] = files_data
 
         if debug is not None:
-            if debug == 'print_request_kwargs':
+            if debug == "print_request_kwargs":
                 print(_request_kwargs)
-            elif debug == 'return_request_kwargs':
+            elif debug == "return_request_kwargs":
                 return _request_kwargs
 
         response = dispatch(method, url, **_request_kwargs)
@@ -279,7 +279,7 @@ def mk_request_function(
             return output_trans(response)
         return response
 
-    if function_kind == 'method':
+    if function_kind == "method":
         _request_func = request_func
 
         def request_func(self, *args, **kwargs):
@@ -289,25 +289,25 @@ def mk_request_function(
         return wraps(wraps_func)(request_func)
     else:
         if formatted_arg_specs:
-            if function_kind == 'method':
-                set_signature_of_func(request_func, ['self'] + formatted_arg_specs)
-            elif function_kind == 'function':
+            if function_kind == "method":
+                set_signature_of_func(request_func, ["self"] + formatted_arg_specs)
+            elif function_kind == "function":
                 set_signature_of_func(request_func, formatted_arg_specs)
 
     request_func.original_spec = original_spec
     request_func.func_args = func_args
     request_func.debug = debug
     request_func.method_spec = method_spec
-    funcname = method_spec.get('method_name', None)
+    funcname = method_spec.get("method_name", None)
     if funcname:
         request_func.__name__ = funcname
-    docstring = method_spec.get('docstring', None)
+    docstring = method_spec.get("docstring", None)
     if docstring:
         request_func.__doc__ = docstring
 
     assert callable(
         output_trans
-    ), f'output_trans {output_trans} is not callable, try again'
+    ), f"output_trans {output_trans} is not callable, try again"
     return request_func
 
 
@@ -402,15 +402,15 @@ class Py2Request(object):
                 for method_name, method_spec in self._method_specs.items():
                     if isinstance(method_spec, str):
                         # TODO: feat: add signature control in string method_spec?
-                        method_spec = {'method': 'GET', 'url_template': method_spec}
-                    if 'url_template' in method_spec:
-                        if 'args' not in method_spec:
-                            method_spec['args'] = extract_format_names(
-                                method_spec['url_template']
+                        method_spec = {"method": "GET", "url_template": method_spec}
+                    if "url_template" in method_spec:
+                        if "args" not in method_spec:
+                            method_spec["args"] = extract_format_names(
+                                method_spec["url_template"]
                             )
-                        if 'query_arg_names' not in method_spec:
-                            method_spec['query_arg_names'] = extract_format_names(
-                                method_spec['url_template']
+                        if "query_arg_names" not in method_spec:
+                            method_spec["query_arg_names"] = extract_format_names(
+                                method_spec["url_template"]
                             )
                     yield method_name, method_spec
 
@@ -435,17 +435,17 @@ class Py2Request(object):
 
 def _mk_method_func_and_wrap(method_spec, method_func_from_method_spec):
     method_spec = dict(**method_spec)
-    method_wrap = method_spec.pop('method_wrap', None)
-    url_template = method_spec.get('url_template', None)
+    method_wrap = method_spec.pop("method_wrap", None)
+    url_template = method_spec.get("url_template", None)
     method_func = method_func_from_method_spec(method_spec)
     if url_template is not None:
         # Add a signature to the method_func
-        if 'signature' in method_spec:
-            sig = Sig(method_spec['signature'])
+        if "signature" in method_spec:
+            sig = Sig(method_spec["signature"])
         else:
             arg_names = extract_format_names(url_template)
             # TODO: What about args? difference between args and query_arg_names?
-            pk_names = method_spec.get('query_arg_names', ())
+            pk_names = method_spec.get("query_arg_names", ())
             sig = _mk_signature_from_names(arg_names, pk_names)
         method_func = sig(method_func)
     return method_func, method_wrap
@@ -454,12 +454,12 @@ def _mk_method_func_and_wrap(method_spec, method_func_from_method_spec):
 def _mk_signature_from_names(arg_names, pk_names):
     assert set(pk_names) <= set(
         arg_names
-    ), 'The query_arg_names must be a subset of the names in the url_template'
+    ), "The query_arg_names must be a subset of the names in the url_template"
     ko_names = _difference_conserving_order(arg_names, pk_names)
     if ko_names:
-        ko_names_str = '*, ' + ', '.join(ko_names)
+        ko_names_str = "*, " + ", ".join(ko_names)
     else:
-        ko_names_str = ''
+        ko_names_str = ""
     sig = Sig(f"(self, {', '.join(pk_names)}{ko_names_str})")
     return sig
 
@@ -535,28 +535,28 @@ class UrlMethodSpecsMaker:
         #         map(lambda kv: f'{kv[0]}={kv[1]}', constant_url_query.items()))
         self.constant_items = constant_items
 
-    def __call__(self, route='', url_queries=None, **more_url_queries):
+    def __call__(self, route="", url_queries=None, **more_url_queries):
         d = {}
         url_template = self.url_root + route
         if url_queries is None:
-            d = {'url_template': url_template}
+            d = {"url_template": url_template}
         else:
             if isinstance(url_queries, str):
                 url_queries = {url_queries: url_queries}
             elif isinstance(url_queries, (list, tuple, set)):
                 url_queries = {name: name for name in url_queries}
             # assert the general case where url query (key) and arg (val) names are different
-            assert isinstance(url_queries, dict), 'url_queries should be a dict'
+            assert isinstance(url_queries, dict), "url_queries should be a dict"
             url_queries = dict(
                 self.constant_url_query,
                 **dict(url_queries, **more_url_queries),
             )
-            url_template += '?' + '&'.join(
-                map(lambda kv: f'{kv[0]}={{{kv[1]}}}', url_queries.items())
+            url_template += "?" + "&".join(
+                map(lambda kv: f"{kv[0]}={{{kv[1]}}}", url_queries.items())
             )
             d = {
-                'url_template': url_template,
-                'args': list(url_queries.values()),
+                "url_template": url_template,
+                "args": list(url_queries.values()),
             }
         return dict(d, **self.constant_items)
 
@@ -580,8 +580,8 @@ def raw_response_on_error(func):
 
 def mk_method_spec_from_openapi_method_spec(
     openapi_method_spec,
-    method='post',
-    url_template='',
+    method="post",
+    url_template="",
     content_type=JSON_CONTENT_TYPE,
     input_trans=None,
     output_trans=None,
@@ -590,48 +590,48 @@ def mk_method_spec_from_openapi_method_spec(
     query_arg_names = []
     body_arg_names = []
     arg_specs = []
-    if 'parameters' in openapi_method_spec:
-        params = openapi_method_spec['parameters']
+    if "parameters" in openapi_method_spec:
+        params = openapi_method_spec["parameters"]
         for param in params:
-            argname = param['name']
-            argtype = param['schema']['type']
-            arg_spec = {'name': argname}
+            argname = param["name"]
+            argtype = param["schema"]["type"]
+            arg_spec = {"name": argname}
             pytype = pytype_for_oatype[argtype]
             if pytype:
-                arg_spec['type'] = pytype
-            if param.get('in', 'path') == 'path':
-                arg_spec['required'] = True
+                arg_spec["type"] = pytype
+            if param.get("in", "path") == "path":
+                arg_spec["required"] = True
                 path_arg_names.append(argname)
             else:
-                if param.get('required'):
-                    arg_spec['required'] = True
-                elif 'default' in param:
-                    arg_spec['default'] = param['default']
+                if param.get("required"):
+                    arg_spec["required"] = True
+                elif "default" in param:
+                    arg_spec["default"] = param["default"]
                 query_arg_names.append(argname)
             arg_specs.append(arg_spec)
-    if 'requestBody' in openapi_method_spec:
+    if "requestBody" in openapi_method_spec:
         body_properties = glom(
             openapi_method_spec,
-            f'requestBody.content.{content_type}.schema.properties',
+            f"requestBody.content.{content_type}.schema.properties",
             default={},
         )
         required_properties = glom(
             openapi_method_spec,
-            f'requestBody.content.{content_type}.schema.required',
+            f"requestBody.content.{content_type}.schema.required",
             default=[],
         )
         for argname, details in body_properties.items():
             body_arg_names.append(argname)
             # TODO: fully support typed dict and typed iterable types
-            arg_spec = {'name': argname}
-            argtype = details.get('type', None)
+            arg_spec = {"name": argname}
+            argtype = details.get("type", None)
             pytype = pytype_for_oatype.get(argtype, None)
             if pytype:
-                arg_spec['type'] = pytype
-            if 'default' in details:
-                arg_spec['default'] = details['default']
+                arg_spec["type"] = pytype
+            if "default" in details:
+                arg_spec["default"] = details["default"]
             if argname in required_properties:
-                arg_spec['required'] = True
+                arg_spec["required"] = True
             arg_specs.append(arg_spec)
 
     method_spec = dict(
@@ -642,10 +642,10 @@ def mk_method_spec_from_openapi_method_spec(
         path_arg_names=path_arg_names,
         query_arg_names=query_arg_names,
         body_arg_names=body_arg_names,
-        method_name=openapi_method_spec.get('x-method_name', ''),
-        docstring=openapi_method_spec.get('description', ''),
+        method_name=openapi_method_spec.get("x-method_name", ""),
+        docstring=openapi_method_spec.get("description", ""),
         content_type=content_type,
-        response_type=next(iter(glom(openapi_method_spec, f'responses.200.content'))),
+        response_type=next(iter(glom(openapi_method_spec, f"responses.200.content"))),
         arg_specs=arg_specs,
     )
     return method_spec
@@ -667,8 +667,8 @@ def _params_from_props(openapi_props):
         yield Parameter(
             name=name,
             kind=PK,
-            default=p.get('default', Parameter.empty),
-            annotation=p.get('type', Parameter.empty),
+            default=p.get("default", Parameter.empty),
+            annotation=p.get("type", Parameter.empty),
         )
 
 
@@ -690,20 +690,20 @@ def add_annots_from_openapi_props(func, openapi_props):
 
 
 def _get_path_spec(path, openapi_spec):
-    return openapi_spec['paths'][path]
+    return openapi_spec["paths"][path]
 
 
 def mk_request_func_from_openapi_spec(
     path,
     openapi_spec,
     *,
-    method='post',
+    method="post",
     content_type=JSON_CONTENT_TYPE,
     input_trans=None,
     output_trans=None,
 ):
-    base_url = openapi_spec['servers'][0]['url']
-    if base_url.endswith('/'):
+    base_url = openapi_spec["servers"][0]["url"]
+    if base_url.endswith("/"):
         base_url = base_url[:-1]  # TODO: need a urljoin instead of this hack!
     path_spec = _get_path_spec(path, openapi_spec)
     url = base_url + path  # TODO: url join
@@ -718,25 +718,25 @@ def mk_request_func_from_openapi_spec(
         output_trans=output_trans,
     )
 
-    func = mk_request_function(method_spec, function_kind='function')
+    func = mk_request_function(method_spec, function_kind="function")
     openapi_props = glom(
-        spec, f'requestBody.content.{content_type}.schema.properties', default={}
+        spec, f"requestBody.content.{content_type}.schema.properties", default={}
     )
     # Try to use ju.json_schema_to_signature for better function signatures
-    json_schema = glom(spec, f'requestBody.content.{content_type}.schema', default=None)
+    json_schema = glom(spec, f"requestBody.content.{content_type}.schema", default=None)
     try:
-        _, func_name = path.split('/')  # fragile way of getting the name
+        _, func_name = path.split("/")  # fragile way of getting the name
     except Exception:
-        func_name = 'request_func'
+        func_name = "request_func"
 
-    if 'x-func' in spec:
-        original_func = spec['x-func']
+    if "x-func" in spec:
+        original_func = spec["x-func"]
         func.__signature__ = signature(original_func)
     elif (
         json_schema
         and isinstance(json_schema, dict)
-        and json_schema.get('type') == 'object'
-        and 'properties' in json_schema
+        and json_schema.get("type") == "object"
+        and "properties" in json_schema
     ):
         try:
             func.__signature__ = json_schema_to_signature(json_schema)
@@ -765,9 +765,9 @@ def default_path_to_func_name(method: str, uri: str) -> str:
     import re
 
     name = f"{method}_{uri.lstrip('/')}"
-    name = re.sub(r'[^0-9a-zA-Z_]', '_', name)
-    name = re.sub(r'_+', '_', name)
-    name = name.strip('_')
+    name = re.sub(r"[^0-9a-zA-Z_]", "_", name)
+    name = re.sub(r"_+", "_", name)
+    name = name.strip("_")
     return name
 
 
@@ -777,7 +777,7 @@ def openapi_to_py(
     *,
     path_to_func_name: Callable[[str, str], str] = default_path_to_func_name,
     servers: Optional[list] = None,
-    default_server_url: str = 'http://localhost:8000',
+    default_server_url: str = "http://localhost:8000",
 ) -> Dict[str, Callable]:
     """
     Given an OpenAPI spec dict, returns a dict mapping function names to request functions.
@@ -787,10 +787,10 @@ def openapi_to_py(
     patched_spec = dict(openapi_spec)
     if servers is not None:
         if isinstance(servers, str):
-            servers = [{'url': servers}]
-        patched_spec['servers'] = servers
-    elif 'servers' not in patched_spec:
-        patched_spec['servers'] = [{'url': default_server_url}]
+            servers = [{"url": servers}]
+        patched_spec["servers"] = servers
+    elif "servers" not in patched_spec:
+        patched_spec["servers"] = [{"url": default_server_url}]
 
     if paths is None:
         paths = list(Routes(patched_spec))

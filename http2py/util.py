@@ -9,7 +9,7 @@ except AttributeError:
 
     _files = importlib_resources.files
 
-files = _files('http2py')
+files = _files("http2py")
 
 
 def add_defaults(d, dflts):
@@ -27,7 +27,7 @@ class ModuleNotFoundErrorNiceMessage:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is ModuleNotFoundError:
             raise ModuleNotFoundError(
-                f'''
+                f"""
 It seems you don't have requred `{exc_val.name}` package.
 Try installing it by running:
 
@@ -35,7 +35,7 @@ Try installing it by running:
 
 in your terminal.
 For more information: https://pypi.org/project/{exc_val.name}
-            '''
+            """
             )
 
 
@@ -46,11 +46,11 @@ class I2mintModuleNotFoundErrorNiceMessage:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is ModuleNotFoundError:
             raise ModuleNotFoundError(
-                f'''
+                f"""
 It seems you don't have requred `{exc_val.name}` package. Not sure if this is the problem, but you could try:
     git clone https://github.com/i2mint/{exc_val.name}
 in a place that your python path (i.e. PYTHONPATH environment variable).  
-            '''
+            """
             )
 
 
