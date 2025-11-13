@@ -66,7 +66,7 @@ with I2mintModuleNotFoundErrorNiceMessage():
     from i2.signatures import set_signature_of_func, KO
 
 DFLT_PORT = 5000
-DFLT_BASE_URL = "http://localhost:{port}".format(port=DFLT_PORT)
+DFLT_BASE_URL = f"http://localhost:{DFLT_PORT}"
 DFLT_REQUEST_METHOD = "post"
 DFLT_REQUEST_KWARGS = imdict({"method": DFLT_REQUEST_METHOD, "url": ""})
 
@@ -227,7 +227,7 @@ def mk_request_function(
         if "url_template" in method_spec:
             url_template = method_spec["url_template"]
             # Check if the url template already has parameters, add them otherwise
-            if query_arg_names and not re.search("^.*\?((.*=.*)(&?))+$", url_template):
+            if query_arg_names and not re.search(r"^.*\?((.*=.*)(&?))+$", url_template):
                 url_arg_parts = [f"{x}={{{x}}}" for x in query_arg_names if x in kwargs]
                 url_args = "&".join(url_arg_parts)
                 if url_args:
@@ -316,7 +316,7 @@ DFLT_METHOD_FUNC_FROM_METHOD_SPEC = mk_request_function
 str_formatter = string.Formatter()
 
 
-class Py2Request(object):
+class Py2Request:
     """Make a class that has methods that offer a python interface to web requests"""
 
     def __init__(
@@ -653,8 +653,9 @@ def mk_method_spec_from_openapi_method_spec(
 
 ##### Open api stuff TODO: To move ###########################################
 from inspect import Parameter, Signature
-from typing import Union, Callable, Iterable
-from typing import Mapping as MappingType
+from typing import Union
+from collections.abc import Callable, Iterable
+from collections.abc import Mapping as MappingType
 
 PK = Parameter.POSITIONAL_OR_KEYWORD
 
@@ -755,7 +756,8 @@ def mk_request_func_from_openapi_spec(
 mk_request_function.from_openapi_spec = mk_request_func_from_openapi_spec
 
 
-from typing import Optional, Iterable, Dict, Tuple, Callable
+from typing import Optional, Dict, Tuple
+from collections.abc import Iterable, Callable
 from ju.oas import Routes
 from http2py.py2request import mk_request_func_from_openapi_spec
 
@@ -773,12 +775,12 @@ def default_path_to_func_name(method: str, uri: str) -> str:
 
 def openapi_to_py(
     openapi_spec: dict,
-    paths: Optional[Iterable[Tuple[str, str]]] = None,
+    paths: Iterable[tuple[str, str]] | None = None,
     *,
     path_to_func_name: Callable[[str, str], str] = default_path_to_func_name,
-    servers: Optional[list] = None,
+    servers: list | None = None,
     default_server_url: str = "http://localhost:8000",
-) -> Dict[str, Callable]:
+) -> dict[str, Callable]:
     """
     Given an OpenAPI spec dict, returns a dict mapping function names to request functions.
     The `servers` argument overrides or provides a default for the OpenAPI servers field.

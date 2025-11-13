@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 
 DFLT_CONFIG_FILENAME = os.path.join(Path.home(), ".http2py", "credentials.json")
 

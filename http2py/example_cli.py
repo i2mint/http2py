@@ -1,5 +1,5 @@
 import argh
-from typing import Iterable
+from collections.abc import Iterable
 
 from http2py.cli_maker import mk_argparse_friendly
 from i2.io_trans import AnnotAndDfltIoTrans

@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import requests
-from typing import Callable, Iterable
+from collections.abc import Callable, Iterable
 import yaml
 
 from i2.io_trans import JSONAnnotAndDfltIoTrans
