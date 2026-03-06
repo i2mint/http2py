@@ -1,8 +1,10 @@
+**Note: A new, lighterweight, more modern replacement: [ho](https://github.com/i2mint/ho)**
+
+# (Http) Requests for humans
+
 [Documentation here](https://i2mint.github.io/http2py/)
 
 `the_one_where_we_have_an_http_service_that_we_want_call_through_normal_looking_python_functions`
-
-# (Http) Requests for humans
 
 Tools to create python binders to http web services.
 Here, we develop python data access to web content through http request such as web services or web pages.
