@@ -1,0 +1,190 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "http2py"
+version = "0.1.32"
+description = "Tools to create python binders to http web services."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+keywords = [
+    "webservice",
+    "http",
+    "requests",
+    "API",
+]
+authors = [
+    { name = "Otosense" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "glom",
+    "i2",
+    "ju",
+    "requests",
+    "argh",
+    "PyYAML",
+    "importlib_resources",
+    # TEMPORARY, not imported by http2py: ju/oas.py has an unconditional (and
+    # unused) `import dill` while not declaring dill, so a cold `pip install
+    # http2py` dies on `import ju`. Tracked upstream as i2mint/ju#6. Remove this
+    # line once a fixed ju is released -- tests/test_dependency_workarounds.py
+    # fails as soon as that happens, so it will not be forgotten.
+    "dill",
+]
+
+[project.urls]
+Homepage = "https://github.com/i2mint/http2py"
+Repository = "https://github.com/i2mint/http2py"
+
+[project.scripts]
+api-pkg-maker = "http2py.api_pkg_maker:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "http2py",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+exclude = [
+    "**/*.ipynb",
+    ".git",
+    ".venv",
+    "build",
+    "dist",
+    "tests",
+    "examples",
+    "scrap",
+]
+
+[tool.ruff.lint]
+select = [
+    "D100",
+]
+ignore = [
+    "D203",
+    "E501",
+    "B905",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = [
+    "D",
+]
+"**/examples/*" = [
+    "D",
+]
+"**/scrap/*" = [
+    "D",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "http2py",
+    "tests",
+]
+norecursedirs = [
+    "build",
+    "dist",
+    ".git",
+    ".venv",
+    "*.egg-info",
+]
+doctest_optionflags = [
+    "NORMALIZE_WHITESPACE",
+    "ELLIPSIS",
+]
+
+[tool.wads.ci]
+project_name = "http2py"
+
+[tool.wads.ci.commands]
+pre_test = []
+test = []
+post_test = []
+lint = []
+format = []
+
+[tool.wads.ci.env]
+required_envvars = []
+test_envvars = []
+extra_envvars = []
+
+[tool.wads.ci.env.defaults]
+
+[tool.wads.ci.quality.ruff]
+enabled = true
+
+[tool.wads.ci.quality.black]
+enabled = false
+
+[tool.wads.ci.quality.mypy]
+enabled = false
+
+[tool.wads.ci.testing]
+python_versions = [
+    "3.10",
+    "3.12",
+]
+pytest_args = [
+    "-v",
+    "--tb=short",
+]
+coverage_enabled = true
+coverage_threshold = 0
+coverage_report_format = [
+    "term",
+]
+# `http2py.api_pkg_maker` imports `setuptools.sandbox`, which modern setuptools
+# no longer ships, so the module raises ImportError on import and would abort
+# the whole collection. Whether to rewrite it or drop it is still open on
+# issue #14; excluding it from collection is the reversible middle course.
+# The same two paths are repeated in the repo-root conftest.py so that a bare
+# `pytest` behaves like CI -- tests/test_ci_collection_contract.py keeps the
+# two lists in agreement.
+exclude_paths = [
+    "http2py/api_pkg_maker.py",
+    "http2py/tests",
+]
+test_on_windows = false
+
+[tool.wads.ci.metrics]
+enabled = false
+
+[tool.wads.ci.build]
+sdist = true
+wheel = true
+
+[tool.wads.ci.publish]
+enabled = true
+
+# No docs builder: commit 43aef24 removed docs/ and docsrc/ from this repo, and
+# the legacy CI's `epythet make . github` call is what turned the Publish job
+# red. Nothing here to build.
+[tool.wads.ci.docs]
+enabled = false

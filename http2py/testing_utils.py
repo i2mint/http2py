@@ -1,3 +1,9 @@
+"""Helpers for testing code that talks to an http service.
+
+:class:`MockHttpClient` answers without touching the network, and
+:func:`mk_unit_tests` generates test stubs from a client's bound methods.
+"""
+
 from http2py.client import HttpClient
 
 TEST_NUMBER = 100

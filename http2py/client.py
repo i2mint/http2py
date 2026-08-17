@@ -1,3 +1,9 @@
+"""The main entry point: a python object facading an http service.
+
+:class:`HttpClient` takes an OpenAPI specification (a dict, or the URL of one)
+and exposes each declared route as a normal python method.
+"""
+
 from glom import glom
 from requests import request, get, Session
 from i2.errors import AuthorizationError

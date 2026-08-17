@@ -1,3 +1,9 @@
+"""Turn an http-bound python object into a command line interface.
+
+Signatures are first made argparse-friendly (:func:`mk_argparse_friendly`),
+then dispatched with ``argh`` by :func:`mk_cli` / :func:`dispatch_cli`.
+"""
+
 import argh
 from functools import wraps
 from glom import glom

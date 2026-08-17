@@ -1,3 +1,10 @@
+"""Resolve credentials and build the auth callables that requests will use.
+
+:func:`mk_auth` turns an auth specification -- inline values, environment
+variables, or a JSON credentials file -- into something the request layer can
+attach to outgoing calls.
+"""
+
 import json
 import os
 from pathlib import Path
