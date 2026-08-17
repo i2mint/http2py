@@ -1,3 +1,9 @@
+"""Small general-purpose helpers: data files, dict defaults, JSON-ability checks.
+
+Also holds the friendly ``ModuleNotFoundError`` messages used to point a user at
+the right install when an optional dependency is missing.
+"""
+
 import json
 
 try:

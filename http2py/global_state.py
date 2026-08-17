@@ -1,3 +1,5 @@
+"""Process-wide state (notably the shared ``requests`` session) for the clients."""
+
 from requests import request, Session
 
 _global_state = {}

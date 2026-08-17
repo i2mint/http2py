@@ -1,3 +1,5 @@
+"""Default output transformations used when a method spec does not supply one."""
+
 from http2py.decorators import (
     handle_raw_resp,
     handle_json_resp,

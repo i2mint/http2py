@@ -1,3 +1,14 @@
+"""Generate an installable python package from an OpenAPI specification.
+
+Given a spec (or the URL of one), :func:`mk_api_pkg` writes a small source
+distribution whose functions are bound to the service's routes.
+
+Note: this module imports ``setuptools.sandbox``, which modern setuptools no
+longer provides, so importing it raises ``ImportError``. It is kept in place
+pending a decision (rewrite or remove) and is excluded from test collection;
+see the repo-root ``conftest.py``.
+"""
+
 import argh
 import os
 import shutil

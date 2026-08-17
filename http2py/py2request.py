@@ -305,9 +305,9 @@ def mk_request_function(
     if docstring:
         request_func.__doc__ = docstring
 
-    assert callable(
-        output_trans
-    ), f"output_trans {output_trans} is not callable, try again"
+    assert callable(output_trans), (
+        f"output_trans {output_trans} is not callable, try again"
+    )
     return request_func
 
 
@@ -452,9 +452,9 @@ def _mk_method_func_and_wrap(method_spec, method_func_from_method_spec):
 
 
 def _mk_signature_from_names(arg_names, pk_names):
-    assert set(pk_names) <= set(
-        arg_names
-    ), "The query_arg_names must be a subset of the names in the url_template"
+    assert set(pk_names) <= set(arg_names), (
+        "The query_arg_names must be a subset of the names in the url_template"
+    )
     ko_names = _difference_conserving_order(arg_names, pk_names)
     if ko_names:
         ko_names_str = "*, " + ", ".join(ko_names)

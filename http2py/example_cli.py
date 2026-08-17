@@ -1,3 +1,5 @@
+"""A tiny worked example of the CLI-making tools, used by the docs and by hand."""
+
 import argh
 from collections.abc import Iterable
 

@@ -1,3 +1,10 @@
+"""Response handling: map http status codes to exceptions, decode the payload.
+
+``handle_json_resp`` / ``handle_binary_resp`` / ``handle_raw_resp`` wrap an
+output transformation so it only ever sees a successful response of the
+expected content type.
+"""
+
 from functools import partial
 from i2.errors import (
     AuthorizationError,
