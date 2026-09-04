@@ -1,0 +1,10 @@
+{
+ "recorded_from": "argh 0.31.3 via ArghParser().add_commands(...) with NO explicit name-mapping policy -- argh's legacy mode, which is what http2py.cli_maker.mk_cli used before the cw migration",
+ "note": "Normalised usage lines only: CPython rewrites --help bodies between versions and CI spans 3.10 and 3.12.",
+ "usages": {
+  "__top__": "usage: PROG [-h] {get-thing,make,plain} ...",
+  "get-thing": "usage: PROG get-thing [-h] -u UID -p PID [-v VERBOSE] [-l LIMIT] [-a API_KEY] [-c CONFIG]",
+  "make": "usage: PROG make [-h] -n NAME [--count COUNT] [-f FLAG] [-a API_KEY] [--config CONFIG]",
+  "plain": "usage: PROG plain [-h] [-a API_KEY] [-c CONFIG] [args ...]"
+ }
+}

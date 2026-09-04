@@ -34,7 +34,7 @@ dependencies = [
     "i2",
     "ju",
     "requests",
-    "argh",
+    "cw>=0.1.1,<0.2",
     "PyYAML",
     "importlib_resources",
     # TEMPORARY, not imported by http2py: ju/oas.py has an unconditional (and
@@ -160,15 +160,16 @@ coverage_threshold = 0
 coverage_report_format = [
     "term",
 ]
-# `http2py.api_pkg_maker` imports `setuptools.sandbox`, which modern setuptools
-# no longer ships, so the module raises ImportError on import and would abort
-# the whole collection. Whether to rewrite it or drop it is still open on
-# issue #14; excluding it from collection is the reversible middle course.
-# The same two paths are repeated in the repo-root conftest.py so that a bare
-# `pytest` behaves like CI -- tests/test_ci_collection_contract.py keeps the
-# two lists in agreement.
+# `http2py/tests` stands up a real py2http web service, so it needs a test-only
+# dependency that CI does not install. Excluding it from collection is what keeps
+# `pytest --doctest-modules` from aborting the session on the import.
+# (`http2py/api_pkg_maker.py` used to be excluded here too, because
+# `setuptools.sandbox` no longer exists and the module was unimportable. It is
+# fixed and collected again -- see issue #14.)
+# This path is repeated in the repo-root conftest.py so that a bare `pytest`
+# behaves like CI -- tests/test_ci_collection_contract.py keeps the two lists
+# in agreement.
 exclude_paths = [
-    "http2py/api_pkg_maker.py",
     "http2py/tests",
 ]
 test_on_windows = false

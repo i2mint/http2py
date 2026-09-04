@@ -1,6 +1,6 @@
 """A tiny worked example of the CLI-making tools, used by the docs and by hand."""
 
-import argh
+import cw
 from collections.abc import Iterable
 
 from http2py.cli_maker import mk_argparse_friendly
@@ -13,6 +13,11 @@ def myfun(a: int, b: Iterable[int]):
 
 
 if __name__ == "__main__":
-    parser = argh.ArghParser()
-    parser.add_commands([mk_argparse_friendly(AnnotAndDfltIoTrans()(myfun))])
-    parser.dispatch()
+    from http2py.cli_maker import CLI_CONVENTION
+
+    raise SystemExit(
+        cw.dispatch(
+            [mk_argparse_friendly(AnnotAndDfltIoTrans()(myfun))],
+            convention=CLI_CONVENTION,
+        )
+    )
