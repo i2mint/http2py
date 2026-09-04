@@ -3,21 +3,32 @@
 Given a spec (or the URL of one), :func:`mk_api_pkg` writes a small source
 distribution whose functions are bound to the service's routes.
 
-Note: this module imports ``setuptools.sandbox``, which modern setuptools no
-longer provides, so importing it raises ``ImportError``. It is kept in place
-pending a decision (rewrite or remove) and is excluded from test collection;
-see the repo-root ``conftest.py``.
+The sdist is built by running ``setup.py sdist`` in a subprocess. This module
+used to call ``setuptools.sandbox.run_setup``, which modern setuptools no longer
+ships -- so merely *importing* it raised ``ImportError`` and the
+``api-pkg-maker`` console script could not start at all (i2mint/http2py#14).
+The subprocess is also better behaved: ``sandbox.run_setup`` needed the process
+to ``os.chdir`` into the build directory and never came back.
+
+``setuptools`` is still needed to *run* :func:`mk_api_pkg`, but it is
+deliberately NOT a declared dependency of http2py: it is needed by this one
+function, not by ``import http2py``, and a virtualenv created by ``uv`` does not
+ship it. :func:`_check_build_backend` turns its absence into an actionable
+message instead of a subprocess exit code.
 """
 
-import argh
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 from http2py.client import HttpClient
 from datetime import datetime, timezone
-from setuptools import sandbox
 
-OUTPUT_DIR = os.path.join(os.environ["HOME"], "http2py", "api_pkgs")
+#: Where built packages are written. ``expanduser`` rather than
+#: ``os.environ["HOME"]``: the latter is a module-import-time ``KeyError`` on
+#: Windows, which would take the whole package down with it.
+OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "http2py", "api_pkgs")
 
 INIT_FILE_TPL = """from .funcs import {funcs}
 """
@@ -111,6 +122,8 @@ def mk_api_pkg(
         with open(filepath, "w") as file:
             print(content, file=file)
 
+    _check_build_backend()
+
     tempdir = tempfile.mkdtemp()
     try:
         api = HttpClient(openapi_spec=openapi_spec, url=openapi_url)
@@ -148,8 +161,20 @@ def mk_api_pkg(
             filepath=os.path.join(tempdir, f"setup.cfg"), content=setup_cfg_content
         )
         create_file(filepath=os.path.join(tempdir, f"setup.py"), content=SETUP_PY)
-        os.chdir(tempdir)
-        sandbox.run_setup("setup.py", ["sdist"])
+        build = subprocess.run(
+            [sys.executable, "setup.py", "sdist"],
+            cwd=tempdir,
+            capture_output=True,
+            text=True,
+        )
+        if build.returncode != 0:
+            # check=True would raise a CalledProcessError carrying only the exit
+            # status, discarding the captured output that says what went wrong.
+            raise RuntimeError(
+                f"`setup.py sdist` failed (exit {build.returncode}) while building "
+                f"{pkg_name!r}.\n--- stdout ---\n{build.stdout}"
+                f"\n--- stderr ---\n{build.stderr}"
+            )
         pkg_filename = f"{pkg_name}-{pkg_version}.tar.gz"
         if not os.path.exists(OUTPUT_DIR):
             os.makedirs(OUTPUT_DIR)
@@ -161,9 +186,34 @@ def mk_api_pkg(
         shutil.rmtree(tempdir)
 
 
+def _check_build_backend():
+    """Fail early and legibly when the interpreter cannot build an sdist.
+
+    ``setup.py sdist`` needs setuptools in the *subprocess's* interpreter, which
+    is this one. Environments created by ``uv`` (and ``python -m venv
+    --without-pip``) do not have it. Without this check the user sees a bare
+    ``CalledProcessError`` with an exit status and no cause.
+    """
+    import importlib.util
+
+    if importlib.util.find_spec("setuptools") is None:
+        raise RuntimeError(
+            "mk_api_pkg builds a source distribution with `setup.py sdist`, "
+            f"which needs setuptools in {sys.executable}. Install it with: "
+            f"{sys.executable} -m pip install setuptools"
+        )
+
+
 def main():
-    argh.dispatch_command(mk_api_pkg)
+    """Entry point for the ``api-pkg-maker`` console script; returns the exit code.
+
+    ``cw.dispatch`` returns the code rather than exiting, and
+    ``[project.scripts]`` wraps this in ``sys.exit(main())``.
+    """
+    import cw
+
+    return cw.dispatch(mk_api_pkg)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

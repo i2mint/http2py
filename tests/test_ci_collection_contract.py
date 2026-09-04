@@ -2,15 +2,16 @@
 
 Under ``pytest --doctest-modules`` (what the CI test action runs) an unimportable
 module is not one red test, it is a collection abort that takes the whole session
-down. Two modules in this repo are in that state:
+down.
 
-* ``http2py/api_pkg_maker.py`` imports ``setuptools.sandbox``, removed from
-  modern setuptools;
-* ``http2py/tests/api_pkg_maker_test.py`` imports that module.
+``http2py/api_pkg_maker.py`` used to be in that state -- it imported
+``setuptools.sandbox``, removed from modern setuptools. It now builds the sdist
+in a subprocess instead, imports cleanly, and is collected again. What remains
+excluded is ``http2py/tests``, whose fixtures stand up a real ``py2http`` web
+service: ``py2http`` is a test-only requirement that CI does not install.
 
-Both are left in place on purpose (rewriting vs. deleting ``api_pkg_maker`` is
-still open on issue #14) and excluded from collection in two places that must
-agree: ``[tool.wads.ci.testing].exclude_paths`` in pyproject.toml, and
+The exclusion lives in two places that must agree:
+``[tool.wads.ci.testing].exclude_paths`` in pyproject.toml, and
 ``collect_ignore`` in the repo-root conftest.py.
 
 There is a third, subtler trap that these tests pin down: pytest eagerly imports
@@ -31,10 +32,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Modules that are known-unimportable and therefore excluded from collection.
-# Keep this in step with pyproject's exclude_paths and conftest's collect_ignore.
-KNOWN_UNIMPORTABLE = {"http2py.api_pkg_maker"}
+# Empty, and it should stay that way: an unimportable module aborts the whole
+# CI session rather than failing one test.
+KNOWN_UNIMPORTABLE: set = set()
 
-EXPECTED_EXCLUDED_PATHS = {"http2py/api_pkg_maker.py", "http2py/tests"}
+EXPECTED_EXCLUDED_PATHS = {"http2py/tests"}
 
 
 def _package_modules():
@@ -62,17 +64,27 @@ def test_every_package_module_imports_except_the_known_broken_one():
     assert not failures, f"modules that would abort collection: {failures}"
 
 
-def test_known_broken_module_is_still_broken():
-    """Tripwire for issue #14.
+def test_api_pkg_maker_imports_and_the_console_script_can_start():
+    """The former tripwire for issue #14, inverted now that the module is fixed.
 
-    If ``api_pkg_maker`` starts importing again (someone rewrote it, or removed
-    it), the exclusions below are dead weight and the #14 (a)/(b) question is
-    answered -- so this deliberately fails to force that cleanup rather than
-    letting a stale exclusion sit there forever.
+    ``api-pkg-maker`` is this package's only console script, and it could not
+    start at all: ``from setuptools import sandbox`` raised ``ImportError`` at
+    import time, before ``main()`` was ever entered. Both halves are asserted --
+    the module imports, and the entry point the console script calls is there.
     """
-    for name in KNOWN_UNIMPORTABLE:
-        with pytest.raises(ImportError):
-            importlib.import_module(name)
+    module = importlib.import_module("http2py.api_pkg_maker")
+    assert callable(module.main)
+    assert callable(module.mk_api_pkg)
+
+
+def test_no_module_is_excluded_for_being_unimportable():
+    """Guard the invariant, not the past exception.
+
+    ``KNOWN_UNIMPORTABLE`` is empty. If a future change adds a module that
+    cannot be imported, the honest fix is to fix the module -- not to grow this
+    set -- because an unimportable module aborts collection for everything.
+    """
+    assert KNOWN_UNIMPORTABLE == set()
 
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib needs Python 3.11+")
@@ -137,3 +149,67 @@ def test_excluded_test_dir_conftest_imports_without_undeclared_deps():
         sys.modules.pop("_http2py_tests_conftest", None)
 
     assert hasattr(module, "ws_app")
+
+
+def test_mk_api_pkg_builds_a_source_distribution(tmp_path, monkeypatch):
+    """End-to-end proof that the ``setuptools.sandbox`` fix actually works.
+
+    Builds a real sdist from a spec dict -- no network, no live service -- and
+    checks the archive is where ``mk_api_pkg`` says it is. Also asserts the
+    working directory survives: the old implementation did a bare
+    ``os.chdir(tempdir)`` and never came back, which quietly broke any caller
+    that used relative paths afterwards.
+    """
+    import tarfile
+
+    pytest.importorskip(
+        "setuptools",
+        reason="mk_api_pkg shells out to `setup.py sdist`; setuptools is in the "
+        "dev extra, so this runs in CI but skips in a bare environment",
+    )
+
+    from http2py import api_pkg_maker
+
+    monkeypatch.setattr(api_pkg_maker, "OUTPUT_DIR", str(tmp_path))
+    cwd_before = Path.cwd()
+
+    spec = {
+        "openapi": "3.0.2",
+        "info": {"title": "d", "version": "0.1"},
+        "servers": [{"url": "http://localhost:3030"}],
+        "paths": {
+            "/foo": {
+                "post": {
+                    "x-method_name": "foo",
+                    "description": "foo.",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {"a": {"type": "integer"}},
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "",
+                            "content": {"application/json": {"schema": {}}},
+                        }
+                    },
+                }
+            }
+        },
+    }
+
+    built = api_pkg_maker.mk_api_pkg(spec, pkg_name="probepkg", pkg_version="1.2.3")
+
+    assert Path(built).is_file()
+    assert Path(built).name == "probepkg-1.2.3.tar.gz"
+    assert Path(built).parent == tmp_path
+    assert Path.cwd() == cwd_before, "mk_api_pkg left the process in another directory"
+    with tarfile.open(built) as archive:
+        names = {n.split("/", 1)[-1] for n in archive.getnames()}
+    assert "probepkg/funcs.py" in names

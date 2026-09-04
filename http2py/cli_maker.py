@@ -1,10 +1,14 @@
 """Turn an http-bound python object into a command line interface.
 
 Signatures are first made argparse-friendly (:func:`mk_argparse_friendly`),
-then dispatched with ``argh`` by :func:`mk_cli` / :func:`dispatch_cli`.
+then turned into a parser by :func:`mk_cli` and run by :func:`dispatch_cli`.
+
+The parser is built by ``cw``. Its ``BY_NAME_IF_KWONLY`` naming is what
+reproduces the grammar this module has always produced -- see
+:data:`CLI_CONVENTION`.
 """
 
-import argh
+import dataclasses
 from functools import wraps
 from glom import glom
 from inspect import signature
@@ -15,10 +19,29 @@ import requests
 from collections.abc import Callable, Iterable
 import yaml
 
+import cw
+
 from i2.io_trans import JSONAnnotAndDfltIoTrans
 from i2.signatures import set_signature_of_func, Sig, KO
 from http2py import HttpClient
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
+
+#: How the command line is derived from a signature.
+#:
+#: Every function :func:`register_cli_method` builds has KEYWORD-ONLY parameters
+#: only (plus ``*args``/``**kwargs`` on a no-argument route), because
+#: :func:`Sig.merge_with_sig` is called with ``kind=KO``. For that shape,
+#: ``BY_NAME_IF_KWONLY`` is what reproduces the grammar this module produced
+#: under argh: every parameter is an option, required exactly when it has no
+#: default -- ``get-thing -u UID -p PID [-l LIMIT]``.
+#:
+#: cw's ``ARGH`` default (``BY_NAME_IF_HAS_DEFAULT``) would NOT: it turns a
+#: keyword-only parameter with no default into a *positional*, so every required
+#: API argument would silently change spelling. That is not a cw bug -- it
+#: faithfully reproduces argh's *explicit* ``BY_NAME_IF_HAS_DEFAULT`` policy.
+#: This module never selected a policy, and argh's no-policy legacy mode is the
+#: one that matches ``BY_NAME_IF_KWONLY`` here.
+CLI_CONVENTION = dataclasses.replace(cw.ARGH, naming=cw.BY_NAME_IF_KWONLY)
 
 
 def mk_sig_argparse_friendly(sig):
@@ -109,15 +132,20 @@ def mk_cli(
         for methodname, method in client_details.__dict__.items()
         if getattr(method, "method_spec", None)
     ]
-    parser = argh.ArghParser()
-    parser.add_commands(cli_methods)
-    return parser
+    return cw.mk_parser(cli_methods, convention=CLI_CONVENTION)
 
 
 def dispatch_cli(*args, **kwargs):
-    """Makes a CLI parser with mk_cli and then dispatches it (see documentation of mk_cli)"""
-    parser = mk_cli(*args, **kwargs)
-    parser.dispatch()
+    """Makes a CLI parser with mk_cli and then runs it (see documentation of mk_cli)
+
+    Returns ``None`` when the command ran, and raises ``SystemExit(2)`` on a
+    command-line error -- the same two outcomes the previous argh-based
+    implementation produced. ``cw.run`` *returns* the exit code rather than
+    exiting, so the non-zero case is re-raised here.
+    """
+    code = cw.run(mk_cli(*args, **kwargs))
+    if code:
+        raise SystemExit(code)
 
 
 set_signature_of_func(dispatch_cli, signature(mk_cli))
