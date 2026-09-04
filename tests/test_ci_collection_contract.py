@@ -162,6 +162,12 @@ def test_mk_api_pkg_builds_a_source_distribution(tmp_path, monkeypatch):
     """
     import tarfile
 
+    pytest.importorskip(
+        "setuptools",
+        reason="mk_api_pkg shells out to `setup.py sdist`; setuptools is in the "
+        "dev extra, so this runs in CI but skips in a bare environment",
+    )
+
     from http2py import api_pkg_maker
 
     monkeypatch.setattr(api_pkg_maker, "OUTPUT_DIR", str(tmp_path))

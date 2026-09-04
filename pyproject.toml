@@ -57,6 +57,11 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
+    # Not a runtime dependency of the package: `mk_api_pkg` shells out to
+    # `setup.py sdist`, so setuptools is needed to exercise it. A uv-created
+    # venv does not ship setuptools, so without this the end-to-end
+    # api_pkg_maker test would silently skip in CI.
+    "setuptools",
 ]
 
 [tool.hatch.build.targets.wheel]
