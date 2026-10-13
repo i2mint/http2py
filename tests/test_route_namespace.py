@@ -149,3 +149,16 @@ def test_generated_package_pins_the_http2py_that_has_client_routes():
 
     files = api_pkg_files(SPEC, pkg_name="genpkg_e")
     assert f"http2py>={MIN_HTTP2PY_VERSION}" in files["setup.cfg"]
+
+
+def test_derived_names_do_not_depend_on_the_server_url():
+    spec = _spec_without_names()
+    spec["servers"] = [{"url": "https://example.com/v1/api"}]
+    assert set(_client(spec).routes) == set(_client(_spec_without_names()).routes)
+
+
+@pytest.mark.parametrize("operation_id", ["-", "___", "日本"])
+def test_unusable_operation_id_falls_back_to_method_and_path(operation_id):
+    spec = _spec_without_names()
+    spec["paths"]["/plain"]["get"]["operationId"] = operation_id
+    assert "get_plain" in _client(spec).routes

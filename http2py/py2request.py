@@ -35,7 +35,6 @@ from inspect import signature, Parameter
 import json
 import keyword
 import pickle
-import re
 from glom import glom
 from requests import request
 import string
@@ -619,16 +618,19 @@ def _identifier(text):
     return f"{name}_" if keyword.iskeyword(name) else name
 
 
-def _route_name(openapi_method_spec, method, url_template):
+def _route_name(openapi_method_spec, method, pathname, url_template):
     """The name of the function for a route: its ``x-method_name``, else its
     ``operationId``, else the http method and the path (``get /users/{id}`` gives
     ``get_users_id``), so that routes without ``x-method_name`` do not all share a name.
+    ``pathname`` is the path as the spec gives it, so that a server's base url does not
+    change the names; it defaults to the path of ``url_template``.
     """
-    for key in ("x-method_name", "operationId"):
-        name = openapi_method_spec.get(key)
-        if name:
-            return name if key == "x-method_name" else (_identifier(name) or name)
-    return default_path_to_func_name(method, urlparse(url_template).path)
+    if openapi_method_spec.get("x-method_name"):
+        return openapi_method_spec["x-method_name"]
+    name = _identifier(openapi_method_spec.get("operationId") or "")
+    if pathname is None:
+        pathname = urlparse(url_template).path
+    return name or default_path_to_func_name(method, pathname)
 
 
 def mk_method_spec_from_openapi_method_spec(
@@ -638,6 +640,7 @@ def mk_method_spec_from_openapi_method_spec(
     content_type=JSON_CONTENT_TYPE,
     input_trans=None,
     output_trans=None,
+    pathname=None,
 ):
     path_arg_names = []
     query_arg_names = []
@@ -695,7 +698,7 @@ def mk_method_spec_from_openapi_method_spec(
         path_arg_names=path_arg_names,
         query_arg_names=query_arg_names,
         body_arg_names=body_arg_names,
-        method_name=_route_name(openapi_method_spec, method, url_template),
+        method_name=_route_name(openapi_method_spec, method, pathname, url_template),
         docstring=openapi_method_spec.get("description", ""),
         content_type=content_type,
         response_type=next(iter(glom(openapi_method_spec, f"responses.200.content"))),
