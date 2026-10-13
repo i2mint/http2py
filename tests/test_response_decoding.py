@@ -131,3 +131,16 @@ def test_spec_with_attribute_placeholder_is_refused_by_the_client():
     spec["paths"]["/x/{uid.__class__.__mro__}"] = spec["paths"].pop("/u/{uid}/p/{pid}")
     with pytest.raises(ValueError, match="not a plain name"):
         HttpClient(spec, session_state={"session": object(), "refresh_inputs": {}})
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+def test_form_requests_send_their_fields_whatever_the_method(method):
+    spec = {
+        "method": method,
+        "url_template": "http://h/f",
+        "body_arg_names": ["x", "blob"],
+        "content_type": "multipart/form-data",
+        "output_trans": _identity,
+    }
+    _, _, kwargs = _captured_request(spec, x=1, blob=b"\x00")
+    assert set(kwargs["files"]) == {"blob", "__fields"}

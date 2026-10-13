@@ -287,7 +287,7 @@ def mk_request_function(
                 _request_kwargs["data"] = json.dumps(json_kwargs)
             elif content_type == BINARY_CONTENT_TYPE:
                 _request_kwargs["data"] = binary_dumps(kwargs)
-        elif content_type == FORM_CONTENT_TYPE:
+        if content_type == FORM_CONTENT_TYPE:  # (it used to be sent with GET only)
             fields = json.dumps(json_kwargs).encode("utf-8")
             binaries = {k: (f"{k}.bin", v) for k, v in binary_kwargs.items()}
             files_data = dict(binaries, __fields=fields)
