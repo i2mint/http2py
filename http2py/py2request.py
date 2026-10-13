@@ -200,6 +200,8 @@ def mk_request_function(
 
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
+    if "url_template" in method_spec:
+        check_url_template(method_spec["url_template"])
     method_spec["input_trans"] = method_spec.get("input_trans", None) or {}
 
     request_kwargs = method_spec.get("request_kwargs", {}).copy()
@@ -500,6 +502,30 @@ def _difference_conserving_order(a, b):
     Returns a list with the elements of a that are not in b, but in the same order as a.
     """
     return [x for x in a if x not in b]
+
+
+def check_url_template(url_template: str) -> str:
+    """Return ``url_template`` if every placeholder in it is a plain name.
+
+    A template is filled with ``str.format(**arguments)``, and it may come from a spec
+    fetched from a server. ``{a.__class__}`` or ``{a[0]}`` would read attributes or
+    items of the caller's arguments into the URL, so they are refused.
+
+    >>> check_url_template('http://h/u/{uid}?q={q}')
+    'http://h/u/{uid}?q={q}'
+    >>> check_url_template('http://h/{a.__init__.__globals__}')
+    Traceback (most recent call last):
+      ...
+    ValueError: URL template placeholder '{a.__init__.__globals__}' is not a plain name
+    """
+    for _, field_name, format_spec, _ in str_formatter.parse(url_template):
+        if field_name is None:
+            continue
+        if not field_name.isidentifier() or "{" in (format_spec or ""):
+            raise ValueError(
+                f"URL template placeholder {'{' + field_name + '}'!r} is not a plain name"
+            )
+    return url_template
 
 
 def extract_format_names(string_template):

@@ -98,3 +98,36 @@ def test_path_args_are_url_encoded():
     }
     _, url, _ = _captured_request(spec, uid="a/b c")
     assert url == "http://h/u/a%2Fb%20c"
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        "http://h/{x.__class__}",
+        "http://h/{x[0]}",
+        "http://h/{x:{x.__class__}}",
+        "http://h/{0}",
+    ],
+)
+def test_url_templates_may_only_name_arguments(template):
+    """A spec served by a remote must not read attributes of the caller's
+    arguments into the URL."""
+    spec = {"method": "GET", "url_template": template, "path_arg_names": ["x"]}
+    with pytest.raises(ValueError, match="not a plain name"):
+        mk_request_function(spec)
+
+
+def test_spec_with_attribute_placeholder_is_refused_by_the_client():
+    import copy
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).parent))
+    from spec_fixture import SPEC
+
+    from http2py import HttpClient
+
+    spec = copy.deepcopy(SPEC)
+    spec["paths"]["/x/{uid.__class__.__mro__}"] = spec["paths"].pop("/u/{uid}/p/{pid}")
+    with pytest.raises(ValueError, match="not a plain name"):
+        HttpClient(spec, session_state={"session": object(), "refresh_inputs": {}})
