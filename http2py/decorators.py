@@ -48,6 +48,8 @@ def _handle_error(resp):
             raise InputError(resp.text)
         if resp.reason == "DuplicateRecordError":
             raise DuplicateRecordError(resp.text)
+    if resp.status_code == 401:  # py2http answers AuthorizationError with 401
+        raise AuthorizationError(resp.text)
     if resp.status_code == 403:
         raise ForbiddenError(resp.text)
     if resp.status_code == 404:

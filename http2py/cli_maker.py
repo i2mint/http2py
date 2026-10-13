@@ -24,6 +24,7 @@ import cw
 from i2.io_trans import JSONAnnotAndDfltIoTrans
 from i2.signatures import set_signature_of_func, Sig, KO
 from http2py import HttpClient
+from http2py.decorators import check_loads
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 
 #: How the command line is derived from a signature.
@@ -87,6 +88,8 @@ def mk_cli(
     filename: str = "",
     parse_yaml: bool = False,
     config_filename: str = DFLT_CONFIG_FILENAME,
+    *,
+    binary_loads: Callable = None,
 ):
     """Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.
     Accepts either an OpenAPI spec dict, a url, or path to a local file.
@@ -97,7 +100,12 @@ def mk_cli(
     :param parse_yaml: A flag to indicate that the provided OpenAPI spec is in YAML format rather than JSON (default: False)
     :param config_filename: The path to a local config file that contains authentication details for the HTTP service
         in JSON format (default: ~/.http2cli/credentials.json
+    :param binary_loads: How commands decode binary (octet-stream) responses, passed to
+        ``HttpClient``: ``bytes`` for the raw content, a decoder of your own, or
+        ``http2py.decorators.unsafe_pickle_loads`` for a fully trusted server. By
+        default such a response raises ``BinaryResponseNotDecoded``.
     """
+    check_loads(binary_loads)
     if not openapi_spec:
         if url:
             raw_spec = requests.get(url).text
@@ -128,7 +136,13 @@ def mk_cli(
             expected_auth_kwargs = login_details.get("login_inputs", [])
     client_details = HttpClient(openapi_spec)
     cli_methods = [
-        register_cli_method(openapi_spec, method, expected_auth_kwargs)
+        register_cli_method(
+            openapi_spec,
+            method,
+            expected_auth_kwargs,
+            config_filename,
+            binary_loads=binary_loads,
+        )
         for methodname, method in client_details.__dict__.items()
         if getattr(method, "method_spec", None)
     ]
@@ -157,6 +171,8 @@ def register_cli_method(
     expected_auth_kwargs: Iterable[str] = None,
     config_filename: str = DFLT_CONFIG_FILENAME,
     profile: str = "",
+    *,
+    binary_loads: Callable = None,
 ):
     """Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
     arguments and call a particular method of the client instance
@@ -168,6 +184,8 @@ def register_cli_method(
     :param config_filename: The path to a JSON file to read for authentication kwargs
         (defaults to ~/.http2py/credentials.json)
     :param profile: The named profile to find in the config file
+    :param binary_loads: How binary (octet-stream) responses are decoded (see
+        :func:`mk_cli`)
     """
     methodname = client_method.__name__
     method_sig = Sig(client_method)
@@ -189,7 +207,9 @@ def register_cli_method(
         auth_kwargs = mk_auth(
             auth_kwargs, expected_auth_kwargs, config_filename, profile
         )
-        http_client = HttpClient(openapi_spec, **auth_kwargs)
+        http_client = HttpClient(
+            openapi_spec, binary_loads=binary_loads, **auth_kwargs
+        )
         return getattr(http_client, methodname)(**kwargs)
 
     method_sig.wrap(cli_method)
