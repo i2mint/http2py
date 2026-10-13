@@ -33,11 +33,14 @@ There must be a better way...
 from functools import wraps
 from inspect import signature, Parameter
 import json
+import keyword
 import pickle
+import re
 from glom import glom
 from requests import request
 import string
 import urllib
+from urllib.parse import urlparse
 
 # import io
 import re
@@ -607,6 +610,27 @@ def raw_response_on_error(func):
     return _func
 
 
+def _identifier(text):
+    """``text`` as a public Python identifier: runs of other characters (and of ``_``) become ``_``,
+    a leading digit gets an ``op_`` prefix and a keyword a trailing ``_``."""
+    name = re.sub(r"[\W_]+", "_", text, flags=re.ASCII).strip("_")
+    if name[:1].isdigit():
+        name = f"op_{name}"
+    return f"{name}_" if keyword.iskeyword(name) else name
+
+
+def _route_name(openapi_method_spec, method, url_template):
+    """The name of the function for a route: its ``x-method_name``, else its
+    ``operationId``, else the http method and the path (``get /users/{id}`` gives
+    ``get_users_id``), so that routes without ``x-method_name`` do not all share a name.
+    """
+    for key in ("x-method_name", "operationId"):
+        name = openapi_method_spec.get(key)
+        if name:
+            return name if key == "x-method_name" else (_identifier(name) or name)
+    return default_path_to_func_name(method, urlparse(url_template).path)
+
+
 def mk_method_spec_from_openapi_method_spec(
     openapi_method_spec,
     method="post",
@@ -671,7 +695,7 @@ def mk_method_spec_from_openapi_method_spec(
         path_arg_names=path_arg_names,
         query_arg_names=query_arg_names,
         body_arg_names=body_arg_names,
-        method_name=openapi_method_spec.get("x-method_name", ""),
+        method_name=_route_name(openapi_method_spec, method, url_template),
         docstring=openapi_method_spec.get("description", ""),
         content_type=content_type,
         response_type=next(iter(glom(openapi_method_spec, f"responses.200.content"))),

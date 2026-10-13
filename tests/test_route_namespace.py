@@ -104,3 +104,48 @@ def test_subclass_skipping_init_can_register_routes():
     spec = SPEC["paths"]["/plain"]["get"]
     bare.register_method("https://example.com/plain", "get", spec)
     assert bare.routes["plain"] is bare.plain
+
+
+def _spec_without_names():
+    """A spec whose routes have no ``x-method_name`` (i2mint/http2py#26)."""
+    spec = copy.deepcopy(SPEC)
+    for path_item in spec["paths"].values():
+        for op in path_item.values():
+            op.pop("x-method_name", None)
+    return spec
+
+
+def test_routes_without_x_method_name_get_distinct_names_from_method_and_path():
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        client = _client(_spec_without_names())
+    assert len(client.routes) == len(SPEC["paths"]) == 3
+    assert "get_plain" in client.routes
+    for name, route in client.routes.items():
+        assert route.__name__ == name != "request_func"
+
+
+def test_operation_id_names_a_route_without_x_method_name():
+    spec = _spec_without_names()
+    spec["paths"]["/plain"]["get"]["operationId"] = "list-plain.things"
+    assert "list_plain_things" in _client(spec).routes
+
+
+def test_x_method_name_wins_over_operation_id():
+    spec = _spec_naming_plain("mine")
+    spec["paths"]["/plain"]["get"]["operationId"] = "theirs"
+    assert "mine" in _client(spec).routes
+
+
+def test_api_pkg_for_a_spec_without_x_method_names():
+    files = api_pkg_files(_spec_without_names(), pkg_name="genpkg_d")
+    assert "def get_plain(" in files["genpkg_d/funcs.py"]
+
+
+def test_generated_package_pins_the_http2py_that_has_client_routes():
+    from http2py.api_pkg_maker import MIN_HTTP2PY_VERSION
+
+    files = api_pkg_files(SPEC, pkg_name="genpkg_e")
+    assert f"http2py>={MIN_HTTP2PY_VERSION}" in files["setup.cfg"]
