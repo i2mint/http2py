@@ -71,7 +71,7 @@ def unsafe_pickle_loads(data: bytes) -> Any:
     return pickle.loads(data)
 
 
-_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 
 def _stacklevel_outside_package() -> int:
