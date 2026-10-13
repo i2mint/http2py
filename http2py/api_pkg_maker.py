@@ -30,6 +30,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 from collections.abc import Callable
 from importlib import import_module
 from typing import Optional, Union
@@ -74,7 +75,7 @@ def _apply_sig(meth):
     return wrapper
 {funcs}"""
 
-_RESERVED_ROUTE_NAMES = {"api"}
+_RESERVED_ROUTE_NAMES = {"api", "funcs"}  # funcs: the module's own name
 
 FUNC_TPL = """
 
@@ -118,7 +119,8 @@ def _is_plain_identifier(name: str) -> bool:
 
 def object_ref(obj: Union[str, Callable]) -> str:
     """The dotted import path (``"module.name"``) a generated package uses to
-    import ``obj``: ``obj`` itself when it is a string, else the path of an
+    import ``obj``: ``obj`` itself when it is a string (checked to name a callable,
+    unless its module is not installed here: then a warning), else the path of an
     importable callable, checked to import back to that very object.
 
     >>> object_ref(bytes)
@@ -139,8 +141,13 @@ def object_ref(obj: Union[str, Callable]) -> str:
     module_name, _, name = ref.rpartition(".")
     try:
         imported = getattr(import_module(module_name), name)
-    except (ImportError, AttributeError) as error:
+    except ModuleNotFoundError as error:
+        if isinstance(obj, str):  # may be installed only where the package runs
+            warnings.warn(f"{ref!r} cannot be imported here ({error}); kept as given")
+            return ref
         raise ValueError(f"{ref!r} does not import: {error}") from None
+    except Exception as error:
+        raise ValueError(f"{ref!r} does not import: {error!r}") from None
     if not callable(imported):
         raise ValueError(f"{ref!r} is not callable")
     if not isinstance(obj, str) and imported is not obj:
@@ -159,7 +166,7 @@ def _route_names(api: HttpClient) -> list:
     for name in names:
         if not _is_plain_identifier(name):
             raise ValueError(
-                f"Route name {name[:60]!r} is not a Python identifier: cannot "
+                f"Route name {name[:60]!r} is not an ASCII Python identifier: cannot "
                 "generate a function for it."
             )
         if name.startswith("_") or name in _RESERVED_ROUTE_NAMES:

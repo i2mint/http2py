@@ -71,12 +71,13 @@ def test_spec_is_data_not_source():
         "\uff41\uff50\uff49",  # full-width "api": an identifier Python normalizes to api
         "api",
         "_apply_sig",
+        "funcs",
     ],
 )
 def test_route_name_that_is_not_an_identifier_is_refused(bad_name):
     spec = copy.deepcopy(SPEC)
     spec["paths"]["/plain"]["get"]["x-method_name"] = bad_name
-    with pytest.raises(ValueError, match="not a Python identifier|reserved"):
+    with pytest.raises(ValueError, match="not an ASCII Python identifier|reserved"):
         api_pkg_files(spec, pkg_name="genpkg_bad")
 
 
@@ -99,7 +100,7 @@ def test_binary_loads_reaches_the_generated_client(import_generated):
         "bytes",
         "os.system('x') or bytes",
         "a.b; import os",
-        "no_such_module.loads",
+        "json.no_such_loads",
         "json.decoder",  # a module, not a callable
     ],
 )
@@ -176,3 +177,8 @@ def test_awkward_names_and_values_still_build(tmp_path):
         output_dir=str(tmp_path),
     )
     assert Path(sdist).is_file()
+
+
+def test_binary_loads_ref_to_a_module_not_installed_here_is_kept():
+    with pytest.warns(UserWarning, match="cannot be imported here"):
+        assert object_ref("no_such_module.loads") == "no_such_module.loads"
