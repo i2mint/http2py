@@ -84,8 +84,9 @@ def {func_name}(*args, **kwargs):
     return api.routes[{func_name!r}](*args, **kwargs)
 """
 
-# The first http2py release with ``HttpClient.routes``, which generated packages call.
-MIN_HTTP2PY_VERSION = "0.1.37"
+# The first http2py release whose route names are what generated packages call:
+# ``HttpClient.routes``, with names unique among routes (``get_a_b_2``) and ``get_root``.
+MIN_HTTP2PY_VERSION = "0.1.40"
 
 SETUP_PY = """from setuptools import setup
 

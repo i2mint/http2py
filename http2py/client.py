@@ -13,6 +13,7 @@ from i2.errors import AuthorizationError
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 from http2py.py2request import (
     DFLT_BINARY_DUMPS,
+    _route_name,
     mk_method_spec_from_openapi_method_spec,
     mk_request_function,
 )
@@ -112,6 +113,19 @@ class HttpClient:
         if self.refresh_inputs is None:
             raise ValueError("No refresh inputs provided when instantiating HttpClient")
         self.routes = {}
+        # Names derived from the spec must avoid every explicit name, and a suffixed
+        # name must not take the natural name of a route that comes later.
+        self._explicit_route_names, self._natural_route_names = set(), set()
+        for pathname, path_spec in openapi_spec["paths"].items():
+            for http_method, spec in path_spec.items():
+                if not isinstance(spec, dict):
+                    continue
+                if spec.get("x-method_name"):
+                    self._explicit_route_names.add(spec["x-method_name"])
+                else:
+                    self._natural_route_names.add(
+                        _route_name(spec, http_method, pathname, self.base_url + pathname)
+                    )
         for pathname, path_spec in openapi_spec["paths"].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
@@ -160,6 +174,10 @@ class HttpClient:
             content_type=content_type,
             pathname=pathname,
         )
+        if not openapi_method_spec.get("x-method_name"):
+            method_spec["method_name"] = self._unique_derived_name(
+                method_spec["method_name"], url_template
+            )
         func = mk_request_function(
             method_spec,
             dispatch=self.handle_request,
@@ -190,6 +208,30 @@ class HttpClient:
                 f"Call it as client.routes[{funcname!r}](...).",
                 stacklevel=3,
             )
+
+    def _unique_derived_name(self, name, url_template):
+        """``name``, a name derived from the spec (operationId, or method and path),
+        made unique among the routes so far and the explicit ``x-method_name`` ones: the
+        first route keeps it, later ones get ``_2``, ``_3``, ... in spec order (so
+        a route added before another with the same name renames the other; give
+        routes an ``x-method_name`` to pin their names). Explicit names are never
+        changed. A client that skips ``__init__`` knows no explicit names yet."""
+        taken = set(getattr(self, "routes", ())) | getattr(
+            self, "_explicit_route_names", set()
+        )
+        if name not in taken:
+            return name
+        taken |= getattr(self, "_natural_route_names", set())
+        n = 2
+        while f"{name}_{n}" in taken:
+            n += 1
+        unique = f"{name}_{n}"
+        warnings.warn(
+            f"Another route is already named {name!r}: {url_template!r} is named "
+            f"{unique!r} (give each route its own x-method_name to choose).",
+            stacklevel=4,
+        )
+        return unique
 
     def _can_be_route_attribute(self, name):
         """Whether a route called ``name`` may be set as an attribute of the client:

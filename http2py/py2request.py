@@ -673,7 +673,8 @@ def _route_name(openapi_method_spec, method, pathname, url_template):
     name = _identifier(openapi_method_spec.get("operationId") or "")
     if pathname is None:
         pathname = urlparse(url_template).path
-    return name or default_path_to_func_name(method, pathname)
+    # the root path would be named after the bare method (``get``)
+    return name or default_path_to_func_name(method, pathname.strip("/") or "root")
 
 
 def mk_method_spec_from_openapi_method_spec(
