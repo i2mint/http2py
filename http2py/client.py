@@ -14,6 +14,7 @@ from http2py.py2request import (
     mk_method_spec_from_openapi_method_spec,
     mk_request_function,
 )
+from http2py.decorators import check_loads
 from http2py.global_state import get_global_state
 
 
@@ -67,6 +68,7 @@ class HttpClient:
 
         """
         self.verify_cert = verify_cert
+        check_loads(binary_loads)
         self.binary_loads = binary_loads
         self.binary_dumps = binary_dumps
         if url and not openapi_spec:

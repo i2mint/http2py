@@ -54,7 +54,7 @@ from http2py.constants import (
 )
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
-from http2py.decorators import handle_binary_resp
+from http2py.decorators import check_loads, handle_binary_resp
 from http2py.default_configs import (
     default_json_output_trans,
     default_text_output_trans,
@@ -190,6 +190,7 @@ def mk_request_function(
         That argument is ignored.
 
     """
+    check_loads(binary_loads)
     if isinstance(method_spec, str):
         # If method_spec is a string, assume it's a url_template with a get method
         # like 'http://myapi.com/search?q={search_term}'
@@ -416,7 +417,15 @@ class Py2Request:
             self._inject_method(method_name, method_spec, method_func_from_method_spec)
 
     def _process_method_specs(self):
-        if self._dflt_method_func_from_method_spec == mk_request_function:  # TODO: WTF!
+        # (also when it is a functools.partial of it, e.g. with binary_loads=...)
+        if (
+            getattr(
+                self._dflt_method_func_from_method_spec,
+                "func",
+                self._dflt_method_func_from_method_spec,
+            )
+            is mk_request_function
+        ):  # TODO: WTF!
 
             def gen():
                 for method_name, method_spec in self._method_specs.items():

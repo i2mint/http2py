@@ -21,7 +21,9 @@ Traceback (most recent call last):
 http2py.decorators.BinaryResponseNotDecoded: Got a binary response but no loads=... to decode it. ...
 """
 
+import os
 import pickle
+import sys
 import warnings
 from collections.abc import Callable
 from functools import partial
@@ -69,7 +71,26 @@ def unsafe_pickle_loads(data: bytes) -> Any:
     return pickle.loads(data)
 
 
-def _check_loads(loads):
+_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _stacklevel_outside_package() -> int:
+    """The ``stacklevel`` (for a ``warn`` called by our caller) of the first frame
+    outside http2py, so a warning points at the user's line, however deep in
+    http2py it was raised; and repeated checks of one call collapse into one."""
+    frame, level = sys._getframe(1), 1
+    while frame is not None and frame.f_code.co_filename.startswith(_PACKAGE_DIR):
+        frame, level = frame.f_back, level + 1
+    return level
+
+
+def check_loads(loads) -> None:
+    """Validate a ``loads=`` / ``binary_loads=`` argument: ``None`` or a callable.
+
+    ``pickle.loads`` itself gets a warning suggesting ``unsafe_pickle_loads``.
+    That is advice, not a guard: any other callable (a ``partial`` of
+    ``pickle.loads``, ``dill.loads``, ...) is trusted as given.
+    """
     if loads is None:
         return
     if not callable(loads):
@@ -80,12 +101,12 @@ def _check_loads(loads):
             "compromised server run code on this client. Use "
             "loads=unsafe_pickle_loads to make that choice explicit, and only if "
             "the server is fully trusted.",
-            stacklevel=3,
+            stacklevel=_stacklevel_outside_package(),
         )
 
 
 def _handle_resp(func, content_type, *, loads: Optional[Callable[[bytes], Any]] = None):
-    _check_loads(loads)
+    check_loads(loads)
 
     def output_trans(resp):
         if resp.status_code == 200:

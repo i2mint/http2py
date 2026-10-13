@@ -32,6 +32,7 @@ EVIL = pickle.dumps(_RunsCodeWhenUnpickled())
 
 class _Resp:
     status_code = 200
+    text = ""
 
     def __init__(self, content):
         self.content = content
@@ -152,3 +153,37 @@ def test_http_client_passes_binary_loads_through():
         client().f(x=1)
     assert client(binary_loads=bytes).f(x=1) == EVIL
     assert _calls == []
+
+
+def test_pickle_loads_warning_points_at_the_callers_line():
+    import warnings
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        mk_request_function(
+            _binary_spec(), function_kind="function", binary_loads=pickle.loads
+        )
+    assert caught and all(w.filename == __file__ for w in caught)
+
+
+def test_bad_binary_loads_is_rejected_even_without_binary_endpoints():
+    with pytest.raises(TypeError):
+        mk_request_function({"url": "http://test.invalid"}, binary_loads="x")
+
+
+def test_py2request_accepts_a_partial_of_mk_request_function():
+    from functools import partial
+
+    from http2py.py2request import Py2Request
+
+    sent = []
+    p = Py2Request(
+        {"get": "http://test.invalid/{x}"},
+        method_func_from_method_spec=partial(
+            mk_request_function,
+            dispatch=_fake_dispatch(b"raw", sent),
+            binary_loads=bytes,
+        ),
+    )
+    p.get(x=1)
+    assert sent
