@@ -1,7 +1,7 @@
 import os
 import re
 import pytest
-from http2py.api_pkg_maker import OUTPUT_DIR, mk_api_pkg
+from http2py.api_pkg_maker import mk_api_pkg
 from http2py.constants import JSON_CONTENT_TYPE
 
 
@@ -131,6 +131,7 @@ from http2py.constants import JSON_CONTENT_TYPE
     ],
 )
 def test_mk_api_pkg(
+    tmp_path,
     openapi_spec,
     openapi_url,
     pkg_name,
@@ -147,9 +148,10 @@ def test_mk_api_pkg(
         pkg_description,
         pkg_author,
         pkg_license,
+        output_dir=str(tmp_path),
     )
     output_pkg_dirpath = os.path.dirname(output_pkg_filepath)
-    assert output_pkg_dirpath == OUTPUT_DIR
+    assert output_pkg_dirpath == str(tmp_path)
     output_pkg_filename = os.path.basename(output_pkg_filepath)
     output_pkg_name = re.search(r"(.+?)-", output_pkg_filename).group(1)
     if pkg_name:
