@@ -4,6 +4,8 @@
 and exposes each declared route as a normal python method.
 """
 
+import warnings
+
 from glom import glom
 from requests import request, get, Session
 from i2.errors import AuthorizationError
@@ -22,6 +24,13 @@ class HttpClient:
     """
     A client class meant as an interface to an HTTP service with one or more routes
     defined with an OpenAPI spec.
+
+    Every route is in ``client.routes`` (a ``{name: method}`` dict), and is also an
+    attribute of the client (``client.<name>``) as long as its name neither starts
+    with ``_`` nor is already an attribute of the client: a spec, possibly served by
+    a remote, must not be able to replace the client's own attributes (such as
+    ``session`` or ``handle_request``). A route that cannot be an attribute is still
+    reachable as ``client.routes[name]``, and a warning says so.
     """
 
     auth_type = ""
@@ -31,6 +40,7 @@ class HttpClient:
     refresh_url = ""
     refresh_input_keys = []
     session = None
+    login_args = None  # set by init_security; declared so no route can take the name
 
     def __init__(
         self,
@@ -96,6 +106,7 @@ class HttpClient:
         self.refresh_inputs = session_state.get("refresh_inputs")
         if self.refresh_inputs is None:
             raise ValueError("No refresh inputs provided when instantiating HttpClient")
+        self.routes = {}
         for pathname, path_spec in openapi_spec["paths"].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
@@ -149,7 +160,28 @@ class HttpClient:
         func.method_spec = method_spec
         func.content_type = content_type
         funcname = func.__name__
-        setattr(self, funcname, func.__get__(self))
+        method = func.__get__(self)
+        can_be_attribute = self._can_be_route_attribute(funcname)
+        self.routes[funcname] = method
+        if can_be_attribute:
+            setattr(self, funcname, method)
+        else:
+            warnings.warn(
+                f"Route {funcname!r} is not set as an attribute of the client: the name "
+                f"starts with '_' or is already an attribute of {type(self).__name__}. "
+                f"Call it as client.routes[{funcname!r}](...).",
+                stacklevel=2,
+            )
+
+    def _can_be_route_attribute(self, name):
+        """Whether a route called ``name`` may be set as an attribute of the client:
+        the name is public, and is not an attribute already (unless that attribute is
+        an earlier route of the same name, which a later route replaces)."""
+        if name.startswith("_"):
+            return False
+        if name in self.routes:
+            return vars(self).get(name) is self.routes[name]
+        return not hasattr(self, name)
 
     def handle_request(self, method, url, **_request_kwargs):
         self.ensure_login()
@@ -211,5 +243,5 @@ class HttpClient:
             self._login()
 
     def is_request_method(self, methodname):
-        method = getattr(self, methodname)
+        method = self.routes.get(methodname) or getattr(self, methodname)
         return method and hasattr(method, "method_spec")

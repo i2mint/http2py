@@ -79,9 +79,9 @@ _RESERVED_ROUTE_NAMES = {"api", "funcs"}  # funcs: the module's own name
 
 FUNC_TPL = """
 
-@_apply_sig(api.{func_name})
+@_apply_sig(api.routes[{func_name!r}])
 def {func_name}(*args, **kwargs):
-    return api.{func_name}(*args, **kwargs)
+    return api.routes[{func_name!r}](*args, **kwargs)
 """
 
 SETUP_PY = """from setuptools import setup
@@ -158,11 +158,7 @@ def object_ref(obj: Union[str, Callable]) -> str:
 def _route_names(api: HttpClient) -> list:
     """The method names ``api`` registered, each a plain identifier, since each is
     written into generated source."""
-    names = [
-        name
-        for name, method in vars(api).items()
-        if getattr(method, "method_spec", None)
-    ]
+    names = list(api.routes)
     for name in names:
         if not _is_plain_identifier(name):
             raise ValueError(

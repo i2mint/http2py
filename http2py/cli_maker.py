@@ -143,8 +143,7 @@ def mk_cli(
             config_filename,
             binary_loads=binary_loads,
         )
-        for methodname, method in client_details.__dict__.items()
-        if getattr(method, "method_spec", None)
+        for method in client_details.routes.values()
     ]
     return cw.mk_parser(cli_methods, convention=CLI_CONVENTION)
 
