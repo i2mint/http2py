@@ -124,7 +124,9 @@ class HttpClient:
                     self._explicit_route_names.add(spec["x-method_name"])
                 else:
                     self._natural_route_names.add(
-                        _route_name(spec, http_method, pathname, self.base_url + pathname)
+                        _route_name(
+                            spec, http_method, pathname, self.base_url + pathname
+                        )
                     )
         for pathname, path_spec in openapi_spec["paths"].items():
             url_template = self.base_url + pathname
