@@ -83,6 +83,7 @@ def test_cli_calls_the_route_not_the_client_attribute(monkeypatch):
     spec = _spec_naming_plain("ensure_login")
     with pytest.warns(UserWarning):
         route = _client(spec).routes["ensure_login"]
+
     class Sent(Exception):
         pass
 
@@ -162,3 +163,14 @@ def test_unusable_operation_id_falls_back_to_method_and_path(operation_id):
     spec = _spec_without_names()
     spec["paths"]["/plain"]["get"]["operationId"] = operation_id
     assert "get_plain" in _client(spec).routes
+
+
+def test_a_second_route_of_the_same_name_replaces_the_first_with_a_warning():
+    spec = copy.deepcopy(SPEC)
+    other = copy.deepcopy(spec["paths"]["/plain"])
+    spec["paths"]["/plain2"] = other
+    with pytest.warns(UserWarning, match="Two routes are named"):
+        client = _client(spec)
+    name = other["get"]["x-method_name"]
+    assert client.routes[name].method_spec["url_template"].endswith("/plain2")
+    assert getattr(client, name) is client.routes[name]

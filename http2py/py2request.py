@@ -200,6 +200,11 @@ def mk_request_function(
 
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
+    if "url_template" in method_spec:
+        check_url_template(
+            method_spec["url_template"],
+            query_arg_names=_ensure_list(method_spec.get("query_arg_names", [])),
+        )
     method_spec["input_trans"] = method_spec.get("input_trans", None) or {}
 
     request_kwargs = method_spec.get("request_kwargs", {}).copy()
@@ -285,7 +290,7 @@ def mk_request_function(
                 _request_kwargs["data"] = json.dumps(json_kwargs)
             elif content_type == BINARY_CONTENT_TYPE:
                 _request_kwargs["data"] = binary_dumps(kwargs)
-        elif content_type == FORM_CONTENT_TYPE:
+        if content_type == FORM_CONTENT_TYPE:  # (it used to be sent with GET only)
             fields = json.dumps(json_kwargs).encode("utf-8")
             binaries = {k: (f"{k}.bin", v) for k, v in binary_kwargs.items()}
             files_data = dict(binaries, __fields=fields)
@@ -500,6 +505,44 @@ def _difference_conserving_order(a, b):
     Returns a list with the elements of a that are not in b, but in the same order as a.
     """
     return [x for x in a if x not in b]
+
+
+def _reads_into_arguments(field_name: str) -> bool:
+    """Whether a ``str.format`` field looks up an attribute or item of an argument;
+    any other name (``user-id``, ``0``...) only selects an argument."""
+    return "." in field_name or "[" in field_name
+
+
+def check_url_template(url_template: str, *, query_arg_names=()) -> str:
+    """Return ``url_template`` if no placeholder in it, nor any of the
+    ``query_arg_names`` (appended as ``?name={name}`` when calling), reads into an
+    argument.
+
+    A template is filled with ``str.format(**arguments)``, and it may come from a spec
+    fetched from a server. ``{a.__class__}`` or ``{a[0]}`` would read attributes or
+    items of the caller's arguments into the URL, so they are refused. Other names,
+    such as OpenAPI's hyphenated ``{user-id}``, are fine.
+
+    >>> check_url_template('http://h/u/{user-id}?q={q}')
+    'http://h/u/{user-id}?q={q}'
+    >>> check_url_template('http://h/{a.__init__.__globals__}')
+    Traceback (most recent call last):
+      ...
+    ValueError: URL template placeholder '{a.__init__.__globals__}' reads into an argument
+    """
+    fields = [
+        (field_name, format_spec)
+        for _, field_name, format_spec, _ in str_formatter.parse(url_template)
+        if field_name is not None
+    ]
+    fields += [(name, "") for name in query_arg_names]
+    for field_name, format_spec in fields:
+        if _reads_into_arguments(field_name) or "{" in (format_spec or ""):
+            raise ValueError(
+                f"URL template placeholder {'{' + field_name + '}'!r} reads into an "
+                "argument"
+            )
+    return url_template
 
 
 def extract_format_names(string_template):
