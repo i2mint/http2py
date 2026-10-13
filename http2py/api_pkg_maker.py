@@ -84,6 +84,9 @@ def {func_name}(*args, **kwargs):
     return api.routes[{func_name!r}](*args, **kwargs)
 """
 
+# The first http2py release with ``HttpClient.routes``, which generated packages call.
+MIN_HTTP2PY_VERSION = "0.1.37"
+
 SETUP_PY = """from setuptools import setup
 
 setup()
@@ -103,7 +106,7 @@ include_package_data = True
 zip_safe = False
 install_requires =
     i2
-    http2py
+    http2py>={min_http2py}
 
 [options.package_data]
 * = {spec_filename}
@@ -215,6 +218,7 @@ def api_pkg_files(
         author=_cfg_value(pkg_author or "API Package Maker"),
         license=_cfg_value(pkg_license or "Apache"),
         spec_filename=SPEC_FILENAME,
+        min_http2py=MIN_HTTP2PY_VERSION,
     )
     funcs_code = FUNCS_FILE_TPL.format(
         spec_filename=SPEC_FILENAME,

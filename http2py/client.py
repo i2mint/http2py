@@ -115,7 +115,9 @@ class HttpClient:
         for pathname, path_spec in openapi_spec["paths"].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
-                self.register_method(url_template, http_method, openapi_method_spec)
+                self.register_method(
+                    url_template, http_method, openapi_method_spec, pathname=pathname
+                )
 
     def init_security(self, openapi_spec, **auth_kwargs):
         security = openapi_spec["security"]
@@ -143,7 +145,9 @@ class HttpClient:
             if jwt:
                 self.set_header({"Authorization": f"Bearer {jwt}"})
 
-    def register_method(self, url_template, http_method, openapi_method_spec):
+    def register_method(
+        self, url_template, http_method, openapi_method_spec, *, pathname=None
+    ):
         content_type = None
         if "requestBody" in openapi_method_spec:
             content_type = next(
@@ -154,6 +158,7 @@ class HttpClient:
             method=http_method,
             url_template=url_template,
             content_type=content_type,
+            pathname=pathname,
         )
         func = mk_request_function(
             method_spec,
