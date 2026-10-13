@@ -200,8 +200,10 @@ def api_pkg_files(
         openapi_spec = json.loads(openapi_spec)
     api = HttpClient(openapi_spec=openapi_spec, url=openapi_url)
     func_names = _route_names(api)
-    loads_code = "None" if binary_loads is None else (
-        f"_import_object({object_ref(binary_loads)!r})"
+    loads_code = (
+        "None"
+        if binary_loads is None
+        else (f"_import_object({object_ref(binary_loads)!r})")
     )
     pkg_name = pkg_name or _mk_pkg_name()
     if not _is_plain_identifier(pkg_name):
