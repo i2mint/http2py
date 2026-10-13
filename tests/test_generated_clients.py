@@ -125,6 +125,7 @@ def test_dispatch_cli_passes_binary_loads_to_the_client(monkeypatch, tmp_path):
     class FakeClient:
         def __init__(self, openapi_spec, **kwargs):
             seen.update(kwargs)
+            self.routes = {"plain": self.plain}
 
         def plain(self, **kwargs):
             return "ran"

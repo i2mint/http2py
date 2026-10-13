@@ -207,7 +207,7 @@ def register_cli_method(
             auth_kwargs, expected_auth_kwargs, config_filename, profile
         )
         http_client = HttpClient(openapi_spec, binary_loads=binary_loads, **auth_kwargs)
-        return getattr(http_client, methodname)(**kwargs)
+        return http_client.routes[methodname](**kwargs)
 
     method_sig.wrap(cli_method)
     cli_method.__name__ = methodname

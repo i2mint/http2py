@@ -27,10 +27,12 @@ class HttpClient:
 
     Every route is in ``client.routes`` (a ``{name: method}`` dict), and is also an
     attribute of the client (``client.<name>``) as long as its name neither starts
-    with ``_`` nor is already an attribute of the client: a spec, possibly served by
-    a remote, must not be able to replace the client's own attributes (such as
-    ``session`` or ``handle_request``). A route that cannot be an attribute is still
-    reachable as ``client.routes[name]``, and a warning says so.
+    with ``_`` nor is already an attribute the client works with: a spec, possibly
+    served by a remote, must not be able to replace the client's own attributes (such
+    as ``session`` or ``handle_request``). A route that cannot be an attribute is
+    still reachable as ``client.routes[name]``, and a warning says so. The purely
+    informational attributes (``title``, ``version``, ``base_url``), which the client
+    never reads after ``__init__``, can be taken by a route.
     """
 
     auth_type = ""
@@ -41,6 +43,9 @@ class HttpClient:
     refresh_input_keys = []
     session = None
     login_args = None  # set by init_security; declared so no route can take the name
+    login_response_keys = ()  # idem
+    # Set by __init__ but never read afterwards, so a route may take these names.
+    _route_shadowable_attrs = frozenset({"title", "version", "base_url"})
 
     def __init__(
         self,
@@ -161,6 +166,14 @@ class HttpClient:
         func.content_type = content_type
         funcname = func.__name__
         method = func.__get__(self)
+        if "routes" not in vars(self):  # e.g. a subclass that skips HttpClient.__init__
+            self.routes = {}
+        if funcname in self.routes:
+            warnings.warn(
+                f"Two routes are named {funcname!r} ({url_template!r} replaces the "
+                "earlier one): give each its own x-method_name.",
+                stacklevel=3,
+            )
         can_be_attribute = self._can_be_route_attribute(funcname)
         self.routes[funcname] = method
         if can_be_attribute:
@@ -170,18 +183,21 @@ class HttpClient:
                 f"Route {funcname!r} is not set as an attribute of the client: the name "
                 f"starts with '_' or is already an attribute of {type(self).__name__}. "
                 f"Call it as client.routes[{funcname!r}](...).",
-                stacklevel=2,
+                stacklevel=3,
             )
 
     def _can_be_route_attribute(self, name):
         """Whether a route called ``name`` may be set as an attribute of the client:
-        the name is public, and is not an attribute already (unless that attribute is
-        an earlier route of the same name, which a later route replaces)."""
+        the name is public, and is not an attribute the client works with already
+        (an earlier route of the same name, or a ``_route_shadowable_attrs`` one, can
+        be replaced)."""
         if name.startswith("_"):
             return False
-        if name in self.routes:
-            return vars(self).get(name) is self.routes[name]
-        return not hasattr(self, name)
+        if name in self.routes and vars(self).get(name) is self.routes[name]:
+            return True
+        if name in self._route_shadowable_attrs:
+            return True
+        return not (hasattr(type(self), name) or name in vars(self))
 
     def handle_request(self, method, url, **_request_kwargs):
         self.ensure_login()
@@ -243,5 +259,5 @@ class HttpClient:
             self._login()
 
     def is_request_method(self, methodname):
-        method = self.routes.get(methodname) or getattr(self, methodname)
+        method = getattr(self, methodname)
         return method and hasattr(method, "method_spec")
