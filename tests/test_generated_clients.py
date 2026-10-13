@@ -63,12 +63,20 @@ def test_spec_is_data_not_source():
 
 
 @pytest.mark.parametrize(
-    "bad_name", ["x():\n    import os\n    os.system('x')\ndef y", "class", "a-b"]
+    "bad_name",
+    [
+        "x():\n    import os\n    os.system('x')\ndef y",
+        "class",
+        "a-b",
+        "\uff41\uff50\uff49",  # full-width "api": an identifier Python normalizes to api
+        "api",
+        "_apply_sig",
+    ],
 )
 def test_route_name_that_is_not_an_identifier_is_refused(bad_name):
     spec = copy.deepcopy(SPEC)
     spec["paths"]["/plain"]["get"]["x-method_name"] = bad_name
-    with pytest.raises(ValueError, match="not a Python identifier"):
+    with pytest.raises(ValueError, match="not a Python identifier|reserved"):
         api_pkg_files(spec, pkg_name="genpkg_bad")
 
 
@@ -85,7 +93,15 @@ def test_binary_loads_reaches_the_generated_client(import_generated):
 
 
 @pytest.mark.parametrize(
-    "ref", [lambda b: b, "bytes", "os.system('x') or bytes", "a.b; import os"]
+    "ref",
+    [
+        lambda b: b,
+        "bytes",
+        "os.system('x') or bytes",
+        "a.b; import os",
+        "no_such_module.loads",
+        "json.decoder",  # a module, not a callable
+    ],
 )
 def test_binary_loads_must_be_an_importable_path(ref):
     with pytest.raises(ValueError):
@@ -134,3 +150,29 @@ def test_mk_cli_refuses_a_non_callable_binary_loads():
 
     with pytest.raises(TypeError):
         mk_cli(openapi_spec=SPEC, binary_loads="bytes")
+
+
+def test_spec_without_routes_is_refused():
+    spec = copy.deepcopy(SPEC)
+    spec["paths"] = {"/x": {}}
+    with pytest.raises(RuntimeError, match="empty"):
+        api_pkg_files(spec, pkg_name="genpkg_empty")
+
+
+def test_spec_may_be_given_as_json_text(import_generated):
+    files = api_pkg_files(json.dumps(SPEC), pkg_name="genpkg_text")
+    assert "plain" in vars(import_generated(files))
+
+
+def test_awkward_names_and_values_still_build(tmp_path):
+    pytest.importorskip("setuptools")
+    spec = copy.deepcopy(SPEC)
+    spec["servers"] = [{"url": "https://h/a%20b"}]
+    sdist = mk_api_pkg(
+        spec,
+        pkg_name="MyPkg",
+        pkg_version="v1.0",
+        pkg_author="100% me",
+        output_dir=str(tmp_path),
+    )
+    assert Path(sdist).is_file()

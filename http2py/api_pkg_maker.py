@@ -46,35 +46,39 @@ INIT_FILE_TPL = """from .funcs import {funcs}
 
 SPEC_FILENAME = "openapi_spec.json"
 
-FUNCS_FILE_TPL = """import json
-from importlib import import_module
-from pathlib import Path
+# Every name the generated module defines besides the routes starts with "_",
+# except ``api``; route names may not start with "_" nor be "api" (_route_names).
+FUNCS_FILE_TPL = """import json as _json
+from importlib import import_module as _import_module
+from pathlib import Path as _Path
 
-from i2 import Sig
-from http2py.client import HttpClient
+from i2 import Sig as _Sig
+from http2py.client import HttpClient as _HttpClient
 
 
 def _import_object(ref):
     module_name, _, name = ref.rpartition(".")
-    return getattr(import_module(module_name), name)
+    return getattr(_import_module(module_name), name)
 
 
-_SPEC = json.loads(
-    (Path(__file__).parent / {spec_filename!r}).read_text(encoding="utf-8")
+_SPEC = _json.loads(
+    (_Path(__file__).parent / {spec_filename!r}).read_text(encoding="utf-8")
 )
-api = HttpClient(openapi_spec=_SPEC, binary_loads={binary_loads})
+api = _HttpClient(openapi_spec=_SPEC, binary_loads={binary_loads})
 
 
-def apply_sig(meth):
+def _apply_sig(meth):
     def wrapper(func):
-        sig = Sig(meth) - 'self'
+        sig = _Sig(meth) - 'self'
         return sig(func)
     return wrapper
 {funcs}"""
 
+_RESERVED_ROUTE_NAMES = {"api"}
+
 FUNC_TPL = """
 
-@apply_sig(api.{func_name})
+@_apply_sig(api.{func_name})
 def {func_name}(*args, **kwargs):
     return api.{func_name}(*args, **kwargs)
 """
@@ -104,7 +108,12 @@ install_requires =
 * = {spec_filename}
 """
 
-_DOTTED_PATH = re.compile(r"[A-Za-z_]\w*(\.[A-Za-z_]\w*)+")
+_IDENTIFIER = r"[A-Za-z_][A-Za-z0-9_]*"  # ASCII: Python normalizes other letters
+_DOTTED_PATH = re.compile(rf"{_IDENTIFIER}(\.{_IDENTIFIER})+")
+
+
+def _is_plain_identifier(name: str) -> bool:
+    return re.fullmatch(_IDENTIFIER, name) is not None and not keyword.iskeyword(name)
 
 
 def object_ref(obj: Union[str, Callable]) -> str:
@@ -127,10 +136,15 @@ def object_ref(obj: Union[str, Callable]) -> str:
         ref = f"{getattr(obj, '__module__', '')}.{getattr(obj, '__qualname__', '')}"
     if not _DOTTED_PATH.fullmatch(ref):
         raise ValueError(f"Not an importable module.name path: {ref[:80]!r}")
-    if not isinstance(obj, str):
-        module_name, _, name = ref.rpartition(".")
-        if getattr(import_module(module_name), name, None) is not obj:
-            raise ValueError(f"{ref!r} does not import back to {obj!r}")
+    module_name, _, name = ref.rpartition(".")
+    try:
+        imported = getattr(import_module(module_name), name)
+    except (ImportError, AttributeError) as error:
+        raise ValueError(f"{ref!r} does not import: {error}") from None
+    if not callable(imported):
+        raise ValueError(f"{ref!r} is not callable")
+    if not isinstance(obj, str) and imported is not obj:
+        raise ValueError(f"{ref!r} does not import back to {obj!r}")
     return ref
 
 
@@ -143,16 +157,23 @@ def _route_names(api: HttpClient) -> list:
         if getattr(method, "method_spec", None)
     ]
     for name in names:
-        if not name.isidentifier() or keyword.iskeyword(name):
+        if not _is_plain_identifier(name):
             raise ValueError(
                 f"Route name {name[:60]!r} is not a Python identifier: cannot "
                 "generate a function for it."
             )
+        if name.startswith("_") or name in _RESERVED_ROUTE_NAMES:
+            raise ValueError(
+                f"Route name {name!r} is reserved (it starts with '_' or is 'api')."
+            )
+    if not names:
+        raise RuntimeError("The API is empty")
     return names
 
 
-def _one_line(text: str) -> str:
-    return " ".join(str(text).split())
+def _cfg_value(text: str) -> str:
+    """``text`` as a setup.cfg value: one line, ``%`` escaped from interpolation."""
+    return " ".join(str(text).split()).replace("%", "%%")
 
 
 def api_pkg_files(
@@ -168,26 +189,26 @@ def api_pkg_files(
 ) -> dict:
     """The source files of the package :func:`mk_api_pkg` builds, as
     ``{relative path: text}`` (see :func:`mk_api_pkg` for the arguments)."""
+    if isinstance(openapi_spec, str):  # e.g. given as JSON text on the command line
+        openapi_spec = json.loads(openapi_spec)
     api = HttpClient(openapi_spec=openapi_spec, url=openapi_url)
-    if not api.openapi_spec.get("paths"):
-        raise RuntimeError("The API is empty")
     func_names = _route_names(api)
     loads_code = "None" if binary_loads is None else (
         f"_import_object({object_ref(binary_loads)!r})"
     )
     pkg_name = pkg_name or _mk_pkg_name()
-    if not pkg_name.isidentifier():
-        raise ValueError(f"pkg_name must be a Python identifier: {pkg_name!r}")
+    if not _is_plain_identifier(pkg_name):
+        raise ValueError(f"pkg_name must be an ASCII Python identifier: {pkg_name!r}")
     server_url = api.openapi_spec["servers"][0]["url"]
     setup_cfg = SETUP_CFG_TPL.format(
         name=pkg_name,
-        version=_one_line(pkg_version or "1.0.0"),
-        description=_one_line(
+        version=_cfg_value(pkg_version or "1.0.0"),
+        description=_cfg_value(
             pkg_description
             or f"A client API to consume the webservices exposed at {server_url}"
         ),
-        author=_one_line(pkg_author or "API Package Maker"),
-        license=_one_line(pkg_license or "Apache"),
+        author=_cfg_value(pkg_author or "API Package Maker"),
+        license=_cfg_value(pkg_license or "Apache"),
         spec_filename=SPEC_FILENAME,
     )
     funcs_code = FUNCS_FILE_TPL.format(
@@ -264,7 +285,6 @@ def mk_api_pkg(
         binary_loads=binary_loads,
     )
     pkg_name = next(path.split("/")[0] for path in files if "/" in path)
-    pkg_version = _one_line(pkg_version or "1.0.0")
 
     tempdir = tempfile.mkdtemp()
     try:
@@ -287,7 +307,8 @@ def mk_api_pkg(
                 f"{pkg_name!r}.\n--- stdout ---\n{build.stdout}"
                 f"\n--- stderr ---\n{build.stderr}"
             )
-        pkg_filename = f"{pkg_name}-{pkg_version}.tar.gz"
+        # setuptools normalizes the name and version in the file name it writes
+        (pkg_filename,) = os.listdir(os.path.join(tempdir, "dist"))
         os.makedirs(output_dir, exist_ok=True)
         shutil.copy(src=os.path.join(tempdir, "dist", pkg_filename), dst=output_dir)
 
