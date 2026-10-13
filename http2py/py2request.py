@@ -201,7 +201,10 @@ def mk_request_function(
     original_spec = method_spec
     method_spec = method_spec.copy()  # make a copy
     if "url_template" in method_spec:
-        check_url_template(method_spec["url_template"])
+        check_url_template(
+            method_spec["url_template"],
+            query_arg_names=_ensure_list(method_spec.get("query_arg_names", [])),
+        )
     method_spec["input_trans"] = method_spec.get("input_trans", None) or {}
 
     request_kwargs = method_spec.get("request_kwargs", {}).copy()
@@ -504,26 +507,40 @@ def _difference_conserving_order(a, b):
     return [x for x in a if x not in b]
 
 
-def check_url_template(url_template: str) -> str:
-    """Return ``url_template`` if every placeholder in it is a plain name.
+def _reads_into_arguments(field_name: str) -> bool:
+    """Whether a ``str.format`` field looks up an attribute or item of an argument;
+    any other name (``user-id``, ``0``...) only selects an argument."""
+    return "." in field_name or "[" in field_name
+
+
+def check_url_template(url_template: str, *, query_arg_names=()) -> str:
+    """Return ``url_template`` if no placeholder in it, nor any of the
+    ``query_arg_names`` (appended as ``?name={name}`` when calling), reads into an
+    argument.
 
     A template is filled with ``str.format(**arguments)``, and it may come from a spec
     fetched from a server. ``{a.__class__}`` or ``{a[0]}`` would read attributes or
-    items of the caller's arguments into the URL, so they are refused.
+    items of the caller's arguments into the URL, so they are refused. Other names,
+    such as OpenAPI's hyphenated ``{user-id}``, are fine.
 
-    >>> check_url_template('http://h/u/{uid}?q={q}')
-    'http://h/u/{uid}?q={q}'
+    >>> check_url_template('http://h/u/{user-id}?q={q}')
+    'http://h/u/{user-id}?q={q}'
     >>> check_url_template('http://h/{a.__init__.__globals__}')
     Traceback (most recent call last):
       ...
-    ValueError: URL template placeholder '{a.__init__.__globals__}' is not a plain name
+    ValueError: URL template placeholder '{a.__init__.__globals__}' reads into an argument
     """
-    for _, field_name, format_spec, _ in str_formatter.parse(url_template):
-        if field_name is None:
-            continue
-        if not field_name.isidentifier() or "{" in (format_spec or ""):
+    fields = [
+        (field_name, format_spec)
+        for _, field_name, format_spec, _ in str_formatter.parse(url_template)
+        if field_name is not None
+    ]
+    fields += [(name, "") for name in query_arg_names]
+    for field_name, format_spec in fields:
+        if _reads_into_arguments(field_name) or "{" in (format_spec or ""):
             raise ValueError(
-                f"URL template placeholder {'{' + field_name + '}'!r} is not a plain name"
+                f"URL template placeholder {'{' + field_name + '}'!r} reads into an "
+                "argument"
             )
     return url_template
 

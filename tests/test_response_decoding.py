@@ -106,15 +106,35 @@ def test_path_args_are_url_encoded():
         "http://h/{x.__class__}",
         "http://h/{x[0]}",
         "http://h/{x:{x.__class__}}",
-        "http://h/{0}",
+        "http://h/{x!r:{y}}",
     ],
 )
 def test_url_templates_may_only_name_arguments(template):
     """A spec served by a remote must not read attributes of the caller's
     arguments into the URL."""
     spec = {"method": "GET", "url_template": template, "path_arg_names": ["x"]}
-    with pytest.raises(ValueError, match="not a plain name"):
+    with pytest.raises(ValueError, match="reads into an argument"):
         mk_request_function(spec)
+
+
+def test_query_arg_names_may_only_name_arguments():
+    spec = {
+        "method": "GET",
+        "url_template": "http://h/x",
+        "query_arg_names": ["obj", "obj.token"],
+    }
+    with pytest.raises(ValueError, match="reads into an argument"):
+        mk_request_function(spec)
+
+
+def test_hyphenated_placeholders_still_work():
+    spec = {"method": "GET", "url_template": "http://h/u/{user-id}"}
+    calls = []
+    func = mk_request_function(
+        spec, dispatch=lambda m, u, **kw: calls.append(u) or Resp(b"")
+    )
+    func(None, **{"user-id": "42"})
+    assert calls == ["http://h/u/42"]
 
 
 def test_spec_with_attribute_placeholder_is_refused_by_the_client():
@@ -129,7 +149,7 @@ def test_spec_with_attribute_placeholder_is_refused_by_the_client():
 
     spec = copy.deepcopy(SPEC)
     spec["paths"]["/x/{uid.__class__.__mro__}"] = spec["paths"].pop("/u/{uid}/p/{pid}")
-    with pytest.raises(ValueError, match="not a plain name"):
+    with pytest.raises(ValueError, match="reads into an argument"):
         HttpClient(spec, session_state={"session": object(), "refresh_inputs": {}})
 
 
