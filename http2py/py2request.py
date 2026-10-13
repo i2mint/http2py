@@ -54,11 +54,18 @@ from http2py.constants import (
 )
 
 from http2py.util import I2mintModuleNotFoundErrorNiceMessage, is_jsonable
+from http2py.decorators import check_loads, handle_binary_resp
 from http2py.default_configs import (
     default_json_output_trans,
     default_text_output_trans,
-    default_binary_output_trans,
+    _default_output_trans,
 )
+
+# Binary request bodies are pickled by default. That is safe for this client (it
+# only serializes its own arguments), but a server must opt into unpickling them
+# (py2http's ``handle_binary_req(..., loads=unsafe_pickle_loads)``), so pass
+# ``binary_dumps=`` to match whatever decoder the server uses.
+DFLT_BINARY_DUMPS = pickle.dumps
 
 # TODO: Do we really need this anymore?
 with I2mintModuleNotFoundErrorNiceMessage():
@@ -130,7 +137,13 @@ def mk_param_spec_from_arg_schema(arg, required=False):
 # TODO: Deprecated output_trans in favor of egress, for consistency with other i2imint?
 # TODO: Use method_spec object that has more schema, signature, and validation.
 def mk_request_function(
-    method_spec, *, function_kind="method", dispatch=request, verify_cert=True
+    method_spec,
+    *,
+    function_kind="method",
+    dispatch=request,
+    verify_cert=True,
+    binary_loads=None,
+    binary_dumps=DFLT_BINARY_DUMPS,
 ):
     """
     Makes function that will make http requests for you, on your own terms.
@@ -165,11 +178,19 @@ def mk_request_function(
         - 'wraps': A function whose signature we should use as the output's function's signature
 
     :param method_spec: Specification of how to convert arguments of the function that is being made to an http request.
+    :param binary_loads: How to decode a binary (octet-stream) response, when
+        ``method_spec`` has no ``output_trans``. ``None`` (the default) raises
+        ``BinaryResponseNotDecoded`` on such a response rather than unpickling
+        it; pass ``bytes`` for the raw content, a decoder of your own, or
+        ``http2py.decorators.unsafe_pickle_loads`` if the server is fully trusted.
+    :param binary_dumps: How to encode the arguments of a binary request body
+        (default ``pickle.dumps``; see ``DFLT_BINARY_DUMPS``).
     :return: A function.
         Note: I say "function", but the function is meant to be a method, so the function has a self as first argument.
         That argument is ignored.
 
     """
+    check_loads(binary_loads)
     if isinstance(method_spec, str):
         # If method_spec is a string, assume it's a url_template with a get method
         # like 'http://myapi.com/search?q={search_term}'
@@ -202,7 +223,7 @@ def mk_request_function(
         elif response_type == JSON_CONTENT_TYPE:
             output_trans = default_json_output_trans
         else:
-            output_trans = default_binary_output_trans
+            output_trans = handle_binary_resp(_default_output_trans, loads=binary_loads)
 
     wraps_func = method_spec.pop("wraps", None)
 
@@ -261,7 +282,7 @@ def mk_request_function(
                     )
                 _request_kwargs["data"] = json.dumps(json_kwargs)
             elif content_type == BINARY_CONTENT_TYPE:
-                _request_kwargs["data"] = pickle.dumps(kwargs)
+                _request_kwargs["data"] = binary_dumps(kwargs)
         elif content_type == FORM_CONTENT_TYPE:
             fields = json.dumps(json_kwargs).encode("utf-8")
             binaries = {k: (f"{k}.bin", v) for k, v in binary_kwargs.items()}
@@ -396,7 +417,15 @@ class Py2Request:
             self._inject_method(method_name, method_spec, method_func_from_method_spec)
 
     def _process_method_specs(self):
-        if self._dflt_method_func_from_method_spec == mk_request_function:  # TODO: WTF!
+        # (also when it is a functools.partial of it, e.g. with binary_loads=...)
+        if (
+            getattr(
+                self._dflt_method_func_from_method_spec,
+                "func",
+                self._dflt_method_func_from_method_spec,
+            )
+            is mk_request_function
+        ):  # TODO: WTF!
 
             def gen():
                 for method_name, method_spec in self._method_specs.items():
@@ -702,6 +731,8 @@ def mk_request_func_from_openapi_spec(
     content_type=JSON_CONTENT_TYPE,
     input_trans=None,
     output_trans=None,
+    binary_loads=None,
+    binary_dumps=DFLT_BINARY_DUMPS,
 ):
     base_url = openapi_spec["servers"][0]["url"]
     if base_url.endswith("/"):
@@ -719,7 +750,12 @@ def mk_request_func_from_openapi_spec(
         output_trans=output_trans,
     )
 
-    func = mk_request_function(method_spec, function_kind="function")
+    func = mk_request_function(
+        method_spec,
+        function_kind="function",
+        binary_loads=binary_loads,
+        binary_dumps=binary_dumps,
+    )
     openapi_props = glom(
         spec, f"requestBody.content.{content_type}.schema.properties", default={}
     )
@@ -780,10 +816,13 @@ def openapi_to_py(
     path_to_func_name: Callable[[str, str], str] = default_path_to_func_name,
     servers: list | None = None,
     default_server_url: str = "http://localhost:8000",
+    binary_loads=None,
+    binary_dumps=DFLT_BINARY_DUMPS,
 ) -> dict[str, Callable]:
     """
     Given an OpenAPI spec dict, returns a dict mapping function names to request functions.
     The `servers` argument overrides or provides a default for the OpenAPI servers field.
+    `binary_loads` / `binary_dumps` are passed to `mk_request_function`.
     """
     # Patch the spec with servers if needed
     patched_spec = dict(openapi_spec)
@@ -799,7 +838,13 @@ def openapi_to_py(
     result = {}
     for method, uri in paths:
         func_name = path_to_func_name(method, uri)
-        func = mk_request_func_from_openapi_spec(uri, patched_spec, method=method)
+        func = mk_request_func_from_openapi_spec(
+            uri,
+            patched_spec,
+            method=method,
+            binary_loads=binary_loads,
+            binary_dumps=binary_dumps,
+        )
         result[func_name] = func
     return result
 

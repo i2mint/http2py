@@ -37,12 +37,6 @@ dependencies = [
     "cw>=0.1.1,<0.2",
     "PyYAML",
     "importlib_resources",
-    # TEMPORARY, not imported by http2py: ju/oas.py has an unconditional (and
-    # unused) `import dill` while not declaring dill, so a cold `pip install
-    # http2py` dies on `import ju`. Tracked upstream as i2mint/ju#6. Remove this
-    # line once a fixed ju is released -- tests/test_dependency_workarounds.py
-    # fails as soon as that happens, so it will not be forgotten.
-    "dill",
 ]
 
 [project.urls]
