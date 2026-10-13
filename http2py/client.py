@@ -13,6 +13,7 @@ from i2.errors import AuthorizationError
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 from http2py.py2request import (
     DFLT_BINARY_DUMPS,
+    _route_name,
     mk_method_spec_from_openapi_method_spec,
     mk_request_function,
 )
@@ -112,12 +113,19 @@ class HttpClient:
         if self.refresh_inputs is None:
             raise ValueError("No refresh inputs provided when instantiating HttpClient")
         self.routes = {}
-        self._explicit_route_names = {  # derived names must not take these
-            spec["x-method_name"]
-            for path_spec in openapi_spec["paths"].values()
-            for spec in path_spec.values()
-            if isinstance(spec, dict) and spec.get("x-method_name")
-        }
+        # Names derived from the spec must avoid every explicit name, and a suffixed
+        # name must not take the natural name of a route that comes later.
+        self._explicit_route_names, self._natural_route_names = set(), set()
+        for pathname, path_spec in openapi_spec["paths"].items():
+            for http_method, spec in path_spec.items():
+                if not isinstance(spec, dict):
+                    continue
+                if spec.get("x-method_name"):
+                    self._explicit_route_names.add(spec["x-method_name"])
+                else:
+                    self._natural_route_names.add(
+                        _route_name(spec, http_method, pathname, self.base_url + pathname)
+                    )
         for pathname, path_spec in openapi_spec["paths"].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
@@ -204,13 +212,16 @@ class HttpClient:
     def _unique_derived_name(self, name, url_template):
         """``name``, a name derived from the spec (operationId, or method and path),
         made unique among the routes so far and the explicit ``x-method_name`` ones: the
-        first route keeps it, later ones get ``_2``, ``_3``, ... in spec order.
-        Explicit names are never changed."""
+        first route keeps it, later ones get ``_2``, ``_3``, ... in spec order (so
+        a route added before another with the same name renames the other; give
+        routes an ``x-method_name`` to pin their names). Explicit names are never
+        changed. A client that skips ``__init__`` knows no explicit names yet."""
         taken = set(getattr(self, "routes", ())) | getattr(
             self, "_explicit_route_names", set()
         )
         if name not in taken:
             return name
+        taken |= getattr(self, "_natural_route_names", set())
         n = 2
         while f"{name}_{n}" in taken:
             n += 1

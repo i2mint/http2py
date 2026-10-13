@@ -250,3 +250,23 @@ def test_api_pkg_files_keeps_every_colliding_route():
 def test_root_path_is_not_named_after_the_bare_method():
     client = _client(_spec_with_routes(("/", None, None)))
     assert list(client.routes) == ["get_root"]
+
+
+def test_a_suffix_does_not_take_the_natural_name_of_a_later_route():
+    client = _client(
+        _spec_with_routes(("/a-b", None, None), ("/a_b", None, None), ("/a_b_2", None, None))
+    )
+    assert list(client.routes) == ["get_a_b", "get_a_b_3", "get_a_b_2"]
+    assert client.routes["get_a_b_2"].method_spec["url_template"].endswith("/a_b_2")
+
+
+def test_root_path_and_a_root_route_are_told_apart():
+    client = _client(_spec_with_routes(("/root", None, None), ("/", None, None)))
+    assert sorted(client.routes) == ["get_root", "get_root_2"]
+
+
+def test_openapi_to_py_keeps_the_bare_root_name():
+    from http2py.py2request import openapi_to_py
+
+    spec = _spec_with_routes(("/", None, None), ("/root", None, None))
+    assert sorted(openapi_to_py(spec)) == ["get", "get_root"]
