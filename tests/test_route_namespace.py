@@ -174,3 +174,79 @@ def test_a_second_route_of_the_same_name_replaces_the_first_with_a_warning():
     name = other["get"]["x-method_name"]
     assert client.routes[name].method_spec["url_template"].endswith("/plain2")
     assert getattr(client, name) is client.routes[name]
+
+
+def _spec_with_routes(*routes):
+    """A spec whose routes are ``(path, operationId or None, x-method_name or None)``."""
+    spec = copy.deepcopy(SPEC)
+    template = spec["paths"]["/plain"]["get"]
+    spec["paths"] = {}
+    for path, operation_id, method_name in routes:
+        op = copy.deepcopy(template)
+        op.pop("x-method_name", None)
+        if operation_id:
+            op["operationId"] = operation_id
+        if method_name:
+            op["x-method_name"] = method_name
+        spec["paths"][path] = {"get": op}
+    return spec
+
+
+def test_derived_names_that_collide_are_suffixed_in_spec_order():
+    # i2mint/http2py#28
+    spec = _spec_with_routes(
+        ("/a-b", None, None),
+        ("/a_b", None, None),
+        ("/a/b", None, None),
+        ("/u/{id}", None, None),
+        ("/u/id", None, None),
+        ("/x", "list-things", None),
+        ("/y", "list_things", None),
+        ("/z", "get_zz", None),
+        ("/zz", None, None),
+    )
+    with pytest.warns(UserWarning, match="get_a_b_2"):
+        client = _client(spec)
+    assert list(client.routes) == [
+        "get_a_b",
+        "get_a_b_2",
+        "get_a_b_3",
+        "get_u_id",
+        "get_u_id_2",
+        "list_things",
+        "list_things_2",
+        "get_zz",
+        "get_zz_2",
+    ]
+    for name, route in client.routes.items():
+        assert route.__name__ == name and getattr(client, name) is route
+
+
+def test_explicit_names_are_never_suffixed_and_keep_their_name_over_derived():
+    spec = _spec_with_routes(
+        ("/a-b", None, None),  # derived get_a_b, but an explicit one claims it
+        ("/other", None, "get_a_b"),
+    )
+    client = _client(spec)
+    assert list(client.routes) == ["get_a_b_2", "get_a_b"]
+    assert client.routes["get_a_b"].method_spec["url_template"].endswith("/other")
+
+
+def test_two_explicit_names_that_collide_still_warn_and_the_last_wins():
+    spec = _spec_with_routes(("/p", None, "same"), ("/q", None, "same"))
+    with pytest.warns(UserWarning, match="Two routes are named 'same'"):
+        client = _client(spec)
+    assert list(client.routes) == ["same"]
+
+
+def test_api_pkg_files_keeps_every_colliding_route():
+    spec = _spec_with_routes(("/a-b", None, None), ("/a_b", None, None))
+    with pytest.warns(UserWarning):
+        files = api_pkg_files(spec, pkg_name="genpkg_d")
+    funcs = files["genpkg_d/funcs.py"]
+    assert "def get_a_b(" in funcs and "def get_a_b_2(" in funcs
+
+
+def test_root_path_is_not_named_after_the_bare_method():
+    client = _client(_spec_with_routes(("/", None, None)))
+    assert list(client.routes) == ["get_root"]

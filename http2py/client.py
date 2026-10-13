@@ -112,6 +112,12 @@ class HttpClient:
         if self.refresh_inputs is None:
             raise ValueError("No refresh inputs provided when instantiating HttpClient")
         self.routes = {}
+        self._explicit_route_names = {  # derived names must not take these
+            spec["x-method_name"]
+            for path_spec in openapi_spec["paths"].values()
+            for spec in path_spec.values()
+            if isinstance(spec, dict) and spec.get("x-method_name")
+        }
         for pathname, path_spec in openapi_spec["paths"].items():
             url_template = self.base_url + pathname
             for http_method, openapi_method_spec in path_spec.items():
@@ -160,6 +166,10 @@ class HttpClient:
             content_type=content_type,
             pathname=pathname,
         )
+        if not openapi_method_spec.get("x-method_name"):
+            method_spec["method_name"] = self._unique_derived_name(
+                method_spec["method_name"], url_template
+            )
         func = mk_request_function(
             method_spec,
             dispatch=self.handle_request,
@@ -190,6 +200,27 @@ class HttpClient:
                 f"Call it as client.routes[{funcname!r}](...).",
                 stacklevel=3,
             )
+
+    def _unique_derived_name(self, name, url_template):
+        """``name``, a name derived from the spec (operationId, or method and path),
+        made unique among the routes so far and the explicit ``x-method_name`` ones: the
+        first route keeps it, later ones get ``_2``, ``_3``, ... in spec order.
+        Explicit names are never changed."""
+        taken = set(getattr(self, "routes", ())) | getattr(
+            self, "_explicit_route_names", set()
+        )
+        if name not in taken:
+            return name
+        n = 2
+        while f"{name}_{n}" in taken:
+            n += 1
+        unique = f"{name}_{n}"
+        warnings.warn(
+            f"Another route is already named {name!r}: {url_template!r} is named "
+            f"{unique!r} (give each route its own x-method_name to choose).",
+            stacklevel=4,
+        )
+        return unique
 
     def _can_be_route_attribute(self, name):
         """Whether a route called ``name`` may be set as an attribute of the client:

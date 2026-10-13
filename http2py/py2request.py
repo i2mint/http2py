@@ -872,7 +872,7 @@ def default_path_to_func_name(method: str, uri: str) -> str:
     # Remove leading slash, replace non-alphanum with underscores, collapse repeats, strip
     import re
 
-    name = f"{method}_{uri.lstrip('/')}"
+    name = f"{method}_{uri.lstrip('/') or 'root'}"  # '/' is 'get_root', not 'get'
     name = re.sub(r"[^0-9a-zA-Z_]", "_", name)
     name = re.sub(r"_+", "_", name)
     name = name.strip("_")
