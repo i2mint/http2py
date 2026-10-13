@@ -10,6 +10,7 @@ from i2.errors import AuthorizationError
 
 from http2py.authentication import mk_auth, DFLT_CONFIG_FILENAME
 from http2py.py2request import (
+    DFLT_BINARY_DUMPS,
     mk_method_spec_from_openapi_method_spec,
     mk_request_function,
 )
@@ -37,6 +38,9 @@ class HttpClient:
         session_state=None,
         base_url=None,
         verify_cert=True,
+        *,
+        binary_loads=None,
+        binary_dumps=DFLT_BINARY_DUMPS,
         **auth_kwargs,
     ):
         """
@@ -47,6 +51,13 @@ class HttpClient:
         :param session: A session for HTTP requests
         :param base_url: A base url to enforce if you don't want to take the base url from the OpenAPI spec
         :param verify_cert: If True, it verifies the SSL certificate validity for each https request.
+        :param binary_loads: How to decode binary (octet-stream) responses. By
+            default they are NOT unpickled (that would let the server run code on
+            this client) and raise ``BinaryResponseNotDecoded``; pass ``bytes``,
+            a decoder of your own, or ``http2py.decorators.unsafe_pickle_loads``
+            if the server is fully trusted.
+        :param binary_dumps: How to encode binary request bodies (default
+            ``pickle.dumps``).
 
         :Keyword Arguments:
             * *api_key*
@@ -56,6 +67,8 @@ class HttpClient:
 
         """
         self.verify_cert = verify_cert
+        self.binary_loads = binary_loads
+        self.binary_dumps = binary_dumps
         if url and not openapi_spec:
             openapi_spec = get(url, verify=self.verify_cert).json()
         self.openapi_spec = openapi_spec
@@ -125,7 +138,11 @@ class HttpClient:
             content_type=content_type,
         )
         func = mk_request_function(
-            method_spec, dispatch=self.handle_request, verify_cert=self.verify_cert
+            method_spec,
+            dispatch=self.handle_request,
+            verify_cert=self.verify_cert,
+            binary_loads=self.binary_loads,
+            binary_dumps=self.binary_dumps,
         )
         func.method_spec = method_spec
         func.content_type = content_type
