@@ -4,7 +4,7 @@ from requests.sessions import Session
 
 
 class Http2Py:
-    def __init__(self, session=None):
+    def __init__(self, session=None) -> None:
         self.session = session or Session()
 
     def __enter__(self):
@@ -13,7 +13,7 @@ class Http2Py:
     def __exit__(self, *args):
         self.close()
 
-    def set_headers(self, headers):
+    def set_headers(self, headers) -> None:
         self.session.headers.update(headers)
 
     def close(self):

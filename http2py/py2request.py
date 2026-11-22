@@ -352,7 +352,7 @@ class Py2Request:
         method_specs=None,
         method_func_from_method_spec=DFLT_METHOD_FUNC_FROM_METHOD_SPEC,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the object with web request calling methods.
         You can also just make an empty Py2Request object, and inject methods later on, one by one.
@@ -456,7 +456,7 @@ class Py2Request:
 
     def _inject_method(
         self, method_name, method_spec, method_func_from_method_spec=None
-    ):
+    ) -> None:
         method_wrap = None
         if not callable(method_spec):
             method_spec, method_wrap = _mk_method_func_and_wrap(
@@ -564,7 +564,7 @@ class UrlMethodSpecsMaker:
     Utility to help in making templated method_specs dicts to be used to define a Py2Request object.
     """
 
-    def __init__(self, url_root, constant_url_query=None, **constant_items):
+    def __init__(self, url_root, constant_url_query=None, **constant_items) -> None:
         r"""
         Make a method_spec factory.
 

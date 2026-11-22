@@ -59,7 +59,7 @@ class HttpClient:
         binary_loads=None,
         binary_dumps=DFLT_BINARY_DUMPS,
         **auth_kwargs,
-    ):
+    ) -> None:
         """
         Initialize the client with an OpenAPI spec and optional authentication inputs
 
@@ -135,7 +135,7 @@ class HttpClient:
                     url_template, http_method, openapi_method_spec, pathname=pathname
                 )
 
-    def init_security(self, openapi_spec, **auth_kwargs):
+    def init_security(self, openapi_spec, **auth_kwargs) -> None:
         security = openapi_spec["security"]
         auth_type = list(security.keys())[0]
         if auth_type == "apiKey":
@@ -163,7 +163,7 @@ class HttpClient:
 
     def register_method(
         self, url_template, http_method, openapi_method_spec, *, pathname=None
-    ):
+    ) -> None:
         content_type = None
         if "requestBody" in openapi_method_spec:
             content_type = next(
@@ -235,7 +235,7 @@ class HttpClient:
         )
         return unique
 
-    def _can_be_route_attribute(self, name):
+    def _can_be_route_attribute(self, name) -> bool:
         """Whether a route called ``name`` may be set as an attribute of the client:
         the name is public, and is not an attribute the client works with already
         (an earlier route of the same name, or a ``_route_shadowable_attrs`` one, can
@@ -252,7 +252,7 @@ class HttpClient:
         self.ensure_login()
         return self.session.request(method, url, **_request_kwargs)
 
-    def set_header(self, header):
+    def set_header(self, header) -> None:
         self.session.headers.update(header)
 
     def ensure_login(self):
@@ -284,7 +284,7 @@ class HttpClient:
         ).json()
         return self.receive_login(refresh_result)
 
-    def receive_login(self, login_result):
+    def receive_login(self, login_result) -> None:
         error = login_result.get("error", None)
         if error:
             raise AuthorizationError(error)
@@ -296,7 +296,7 @@ class HttpClient:
             elif key in self.refresh_input_keys:
                 self.refresh_inputs[key] = value
 
-    def set_profile(self, profile: str, config: str = DFLT_CONFIG_FILENAME):
+    def set_profile(self, profile: str, config: str = DFLT_CONFIG_FILENAME) -> None:
         new_auth = mk_auth({}, self.login_input_keys, config, profile)
         if not new_auth:
             raise KeyError(

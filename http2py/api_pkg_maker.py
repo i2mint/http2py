@@ -235,7 +235,7 @@ def api_pkg_files(
     }
 
 
-def _mk_pkg_name():
+def _mk_pkg_name() -> str:
     return f"apipkg{int(datetime.now(timezone.utc).timestamp())}"
 
 
@@ -328,7 +328,7 @@ def mk_api_pkg(
         shutil.rmtree(tempdir)
 
 
-def _check_build_backend():
+def _check_build_backend() -> None:
     """Fail early and legibly when the interpreter cannot build an sdist.
 
     ``setup.py sdist`` needs setuptools in the *subprocess's* interpreter, which
