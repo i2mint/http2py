@@ -148,7 +148,7 @@ def mk_cli(
     return cw.mk_parser(cli_methods, convention=CLI_CONVENTION)
 
 
-def dispatch_cli(*args, **kwargs):
+def dispatch_cli(*args, **kwargs) -> None:
     """Makes a CLI parser with mk_cli and then runs it (see documentation of mk_cli)
 
     Returns ``None`` when the command ran, and raises ``SystemExit(2)`` on a

@@ -11,13 +11,15 @@ TEST_STRING = "test"
 
 
 class MockHttpClient(HttpClient):
-    def __init__(self, openapi_spec=None, session_state=None, url=None, **auth_kwargs):
+    def __init__(
+        self, openapi_spec=None, session_state=None, url=None, **auth_kwargs
+    ) -> None:
         self.ping.method_spec = {}
 
-    def add_mock_methods(self, methods):
+    def add_mock_methods(self, methods) -> None:
         for method_def in methods:
 
-            def _method(*args, **kwargs):
+            def _method(*args, **kwargs) -> None:
                 pass
 
             new_method = _method
@@ -45,7 +47,7 @@ class MockHttpClient(HttpClient):
 # TODO: fill this out. Needs type annotations on the methods
 # (types should be extracted in mk_method_spec_from_openapi_method_spec and then
 # used to make annotations in mk_request_function)
-def mk_unit_tests(client):
+def mk_unit_tests(client) -> None:
     for method_name in dir(client):
         method = getattr(client, method_name)
         method_spec = getattr(method, "method_spec")

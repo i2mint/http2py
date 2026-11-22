@@ -7,7 +7,7 @@ from http2py.cli_maker import mk_argparse_friendly
 from i2.io_trans import AnnotAndDfltIoTrans
 
 
-def myfun(a: int, b: Iterable[int]):
+def myfun(a: int, b: Iterable[int]) -> None:
     print(f"a: {a} {type(a)}")
     print(f"b: {b} {type(b)}")
 

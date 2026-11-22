@@ -27,7 +27,7 @@ import sys
 import warnings
 from collections.abc import Callable
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Optional, NoReturn
 
 from i2.errors import (
     AuthorizationError,
@@ -40,7 +40,7 @@ from i2.errors import (
 from http2py.constants import BINARY_CONTENT_TYPE, JSON_CONTENT_TYPE, RAW_CONTENT_TYPE
 
 
-def _handle_error(resp):
+def _handle_error(resp) -> NoReturn:
     if resp.status_code == 400:
         if resp.reason == "AuthorizationError":
             raise AuthorizationError(resp.text)

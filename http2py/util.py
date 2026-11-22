@@ -60,7 +60,7 @@ in a place that your python path (i.e. PYTHONPATH environment variable).
             )
 
 
-def is_jsonable(x):
+def is_jsonable(x) -> bool | None:
     try:
         json.dumps(x)
         return True
