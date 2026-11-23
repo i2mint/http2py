@@ -122,6 +122,11 @@ doctest_optionflags = [
 [tool.wads.ci]
 project_name = "http2py"
 
+[tool.wads.ci.docs]
+enabled = true
+builder = "epythet"
+ignore_paths = ["tests/", "scrap/", "examples/"]
+
 [tool.wads.ci.commands]
 pre_test = []
 test = []

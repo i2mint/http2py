@@ -4,9 +4,8 @@ name: Continuous Integration (uv)
 # inherits the organization-level PYPI_PASSWORD / SSH_PRIVATE_KEY (visibility:
 # all), which is the same pair other migrated packages in this org publish with.
 #
-# The GitHub Pages job below is gated on [tool.wads.ci.docs].enabled, which is
-# false here: docs/ and docsrc/ were removed from this repo, and the legacy CI's
-# `epythet make . github` call against the now-absent docs is what broke Publish.
+# The GitHub Pages job below is gated on [tool.wads.ci.docs].enabled (true in
+# pyproject.toml): epythet generates docsrc/ from the package on each run.
 on: [push, pull_request]
 
 # Note: Environment variables (PROJECT_NAME and vars from [tool.wads.ci.env])
