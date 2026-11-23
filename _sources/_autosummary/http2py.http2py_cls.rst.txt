@@ -1,0 +1,12 @@
+http2py.http2py\_cls
+====================
+
+.. automodule:: http2py.http2py_cls
+
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Http2Py
+   

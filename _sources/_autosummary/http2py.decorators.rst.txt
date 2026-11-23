@@ -1,0 +1,19 @@
+http2py.decorators
+==================
+
+.. automodule:: http2py.decorators
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      check_loads
+      unsafe_pickle_loads
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      BinaryResponseNotDecoded
+   

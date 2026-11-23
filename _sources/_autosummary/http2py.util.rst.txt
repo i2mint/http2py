@@ -1,0 +1,20 @@
+http2py.util
+============
+
+.. automodule:: http2py.util
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      add_defaults
+      is_jsonable
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      I2mintModuleNotFoundErrorNiceMessage
+      ModuleNotFoundErrorNiceMessage
+   

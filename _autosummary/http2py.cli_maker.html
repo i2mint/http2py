@@ -1,0 +1,473 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link rel="alternate" type="text/markdown" href="http2py.cli_maker.html.md">
+<link rel="describedby" href="../llms.txt" type="text/markdown">
+<link rel="alternate" type="text/markdown" href="http2py.cli_maker.html.md">
+<link rel="describedby" href="llms.txt"><link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="http2py.client" href="http2py.client.html"><link rel="prev" title="http2py.authentication" href="http2py.authentication.html">
+
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
+        <title>http2py.cli_maker - http2py</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f0f0f0;
+  --color-code-foreground: black;
+  --color-brand-primary: #466400;
+  --color-brand-content: #466400;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #a3c666;
+  --color-brand-content: #a3c666;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #a3c666;
+  --color-brand-content: #a3c666;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">http2py</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">http2py</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../api.html">API reference</a><input aria-label="Toggle navigation of API reference" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current has-children"><a class="reference internal" href="http2py.html">http2py</a><input aria-label="Toggle navigation of http2py" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="http2py.api_pkg_maker.html">http2py.api_pkg_maker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.authentication.html">http2py.authentication</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">http2py.cli_maker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.client.html">http2py.client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.constants.html">http2py.constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.decorators.html">http2py.decorators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.default_configs.html">http2py.default_configs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.example_cli.html">http2py.example_cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.global_state.html">http2py.global_state</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.http2py_cls.html">http2py.http2py_cls</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.py2request.html">http2py.py2request</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.testing_utils.html">http2py.testing_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="http2py.util.html">http2py.util</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/_autosummary/http2py.cli_maker.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="module-http2py.cli_maker">
+<span id="http2py-cli-maker"></span><h1>http2py.cli_maker<a class="headerlink" href="#module-http2py.cli_maker" title="Link to this heading">¶</a></h1>
+<p>Turn an http-bound python object into a command line interface.</p>
+<p>Signatures are first made argparse-friendly (<a class="reference internal" href="#http2py.cli_maker.mk_argparse_friendly" title="http2py.cli_maker.mk_argparse_friendly"><code class="xref py py-func docutils literal notranslate"><span class="pre">mk_argparse_friendly()</span></code></a>),
+then turned into a parser by <a class="reference internal" href="#http2py.cli_maker.mk_cli" title="http2py.cli_maker.mk_cli"><code class="xref py py-func docutils literal notranslate"><span class="pre">mk_cli()</span></code></a> and run by <a class="reference internal" href="#http2py.cli_maker.dispatch_cli" title="http2py.cli_maker.dispatch_cli"><code class="xref py py-func docutils literal notranslate"><span class="pre">dispatch_cli()</span></code></a>.</p>
+<p>The parser is built by <code class="docutils literal notranslate"><span class="pre">cw</span></code>. Its <code class="docutils literal notranslate"><span class="pre">BY_NAME_IF_KWONLY</span></code> naming is what
+reproduces the grammar this module has always produced – see
+<a class="reference internal" href="#http2py.cli_maker.CLI_CONVENTION" title="http2py.cli_maker.CLI_CONVENTION"><code class="xref py py-data docutils literal notranslate"><span class="pre">CLI_CONVENTION</span></code></a>.</p>
+<p class="rubric">Module Attributes</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#http2py.cli_maker.CLI_CONVENTION" title="http2py.cli_maker.CLI_CONVENTION"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CLI_CONVENTION</span></code></a></p></td>
+<td><p>How the command line is derived from a signature.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Functions</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#http2py.cli_maker.dispatch_cli" title="http2py.cli_maker.dispatch_cli"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dispatch_cli</span></code></a>([openapi_spec, url, filename, ...])</p></td>
+<td><p>Makes a CLI parser with mk_cli and then runs it (see documentation of mk_cli)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#http2py.cli_maker.mk_argparse_friendly" title="http2py.cli_maker.mk_argparse_friendly"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mk_argparse_friendly</span></code></a>(func)</p></td>
+<td><p>Wraps a function to expose a signature that is compatible with argparse by stripping leading underscores from all keyword arguments, but does not mutate the signature of the original function</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#http2py.cli_maker.mk_cli" title="http2py.cli_maker.mk_cli"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mk_cli</span></code></a>([openapi_spec, url, filename, ...])</p></td>
+<td><p>Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#http2py.cli_maker.mk_sig_argparse_friendly" title="http2py.cli_maker.mk_sig_argparse_friendly"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mk_sig_argparse_friendly</span></code></a>(sig)</p></td>
+<td><p>Modifies a signature to change all leading underscores in param names to trailing underscores, to ensure compatibility with argparse</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#http2py.cli_maker.register_cli_method" title="http2py.cli_maker.register_cli_method"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_cli_method</span></code></a>(openapi_spec, client_method)</p></td>
+<td><p>Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication arguments and call a particular method of the client instance</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py data">
+<dt class="sig sig-object py" id="http2py.cli_maker.CLI_CONVENTION">
+<span class="sig-prename descclassname"><span class="pre">http2py.cli_maker.</span></span><span class="sig-name descname"><span class="pre">CLI_CONVENTION</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Convention(naming='by_name_if_kwonly',</span> <span class="pre">short_flags=True,</span> <span class="pre">hyphenate_commands=True,</span> <span class="pre">hyphenate_groups=False,</span> <span class="pre">default_in_help=True,</span> <span class="pre">hints_when_declared=False,</span> <span class="pre">resolve_hints=False,</span> <span class="pre">decode=&lt;function</span> <span class="pre">argh_decode&gt;,</span> <span class="pre">egress=&lt;function</span> <span class="pre">argh_egress&gt;)</span></span><a class="headerlink" href="#http2py.cli_maker.CLI_CONVENTION" title="Link to this definition">¶</a></dt>
+<dd><p>How the command line is derived from a signature.</p>
+<p>Every function <a class="reference internal" href="#http2py.cli_maker.register_cli_method" title="http2py.cli_maker.register_cli_method"><code class="xref py py-func docutils literal notranslate"><span class="pre">register_cli_method()</span></code></a> builds has KEYWORD-ONLY parameters
+only (plus <code class="docutils literal notranslate"><span class="pre">*args</span></code>/<code class="docutils literal notranslate"><span class="pre">**kwargs</span></code> on a no-argument route), because
+<code class="xref py py-func docutils literal notranslate"><span class="pre">Sig.merge_with_sig()</span></code> is called with <code class="docutils literal notranslate"><span class="pre">kind=KO</span></code>. For that shape,
+<code class="docutils literal notranslate"><span class="pre">BY_NAME_IF_KWONLY</span></code> is what reproduces the grammar this module produced
+under argh: every parameter is an option, required exactly when it has no
+default – <code class="docutils literal notranslate"><span class="pre">get-thing</span> <span class="pre">-u</span> <span class="pre">UID</span> <span class="pre">-p</span> <span class="pre">PID</span> <span class="pre">[-l</span> <span class="pre">LIMIT]</span></code>.</p>
+<p>cw’s <code class="docutils literal notranslate"><span class="pre">ARGH</span></code> default (<code class="docutils literal notranslate"><span class="pre">BY_NAME_IF_HAS_DEFAULT</span></code>) would NOT: it turns a
+keyword-only parameter with no default into a <em>positional</em>, so every required
+API argument would silently change spelling. That is not a cw bug – it
+faithfully reproduces argh’s <em>explicit</em> <code class="docutils literal notranslate"><span class="pre">BY_NAME_IF_HAS_DEFAULT</span></code> policy.
+This module never selected a policy, and argh’s no-policy legacy mode is the
+one that matches <code class="docutils literal notranslate"><span class="pre">BY_NAME_IF_KWONLY</span></code> here.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="http2py.cli_maker.dispatch_cli">
+<span class="sig-prename descclassname"><span class="pre">http2py.cli_maker.</span></span><span class="sig-name descname"><span class="pre">dispatch_cli</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">openapi_spec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parse_yaml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/home/runner/.http2py/credentials.json'</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">binary_loads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/http2py/cli_maker.html#dispatch_cli"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#http2py.cli_maker.dispatch_cli" title="Link to this definition">¶</a></dt>
+<dd><p>Makes a CLI parser with mk_cli and then runs it (see documentation of mk_cli)</p>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> when the command ran, and raises <code class="docutils literal notranslate"><span class="pre">SystemExit(2)</span></code> on a
+command-line error – the same two outcomes the previous argh-based
+implementation produced. <code class="docutils literal notranslate"><span class="pre">cw.run</span></code> <em>returns</em> the exit code rather than
+exiting, so the non-zero case is re-raised here.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="http2py.cli_maker.mk_argparse_friendly">
+<span class="sig-prename descclassname"><span class="pre">http2py.cli_maker.</span></span><span class="sig-name descname"><span class="pre">mk_argparse_friendly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/http2py/cli_maker.html#mk_argparse_friendly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#http2py.cli_maker.mk_argparse_friendly" title="Link to this definition">¶</a></dt>
+<dd><p>Wraps a function to expose a signature that is compatible with argparse by stripping leading
+underscores from all keyword arguments, but does not mutate the signature of the original function</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="http2py.cli_maker.mk_cli">
+<span class="sig-prename descclassname"><span class="pre">http2py.cli_maker.</span></span><span class="sig-name descname"><span class="pre">mk_cli</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">openapi_spec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parse_yaml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/home/runner/.http2py/credentials.json'</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">binary_loads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/http2py/cli_maker.html#mk_cli"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#http2py.cli_maker.mk_cli" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a CLI parser that exposes all of the methods of an HTTP client defined by an OpenAPI spec.
+Accepts either an OpenAPI spec dict, a url, or path to a local file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>openapi_spec</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span>) – An OpenAPI service specification</p></li>
+<li><p><strong>url</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – A URL for an OpenAPI spec that can be accessed with an HTTP GET request</p></li>
+<li><p><strong>filename</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The path to a local file that contains an OpenAPI spec</p></li>
+<li><p><strong>parse_yaml</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – A flag to indicate that the provided OpenAPI spec is in YAML format rather than JSON (default: False)</p></li>
+<li><p><strong>config_filename</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The path to a local config file that contains authentication details for the HTTP service
+in JSON format (default: ~/.http2cli/credentials.json</p></li>
+<li><p><strong>binary_loads</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a></span>) – How commands decode binary (octet-stream) responses, passed to
+<code class="docutils literal notranslate"><span class="pre">HttpClient</span></code>: <code class="docutils literal notranslate"><span class="pre">bytes</span></code> for the raw content, a decoder of your own, or
+<code class="docutils literal notranslate"><span class="pre">http2py.decorators.unsafe_pickle_loads</span></code> for a fully trusted server. By
+default such a response raises <code class="docutils literal notranslate"><span class="pre">BinaryResponseNotDecoded</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="http2py.cli_maker.mk_sig_argparse_friendly">
+<span class="sig-prename descclassname"><span class="pre">http2py.cli_maker.</span></span><span class="sig-name descname"><span class="pre">mk_sig_argparse_friendly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sig</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/http2py/cli_maker.html#mk_sig_argparse_friendly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#http2py.cli_maker.mk_sig_argparse_friendly" title="Link to this definition">¶</a></dt>
+<dd><p>Modifies a signature to change all leading underscores in param names
+to trailing underscores, to ensure compatibility with argparse</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="http2py.cli_maker.register_cli_method">
+<span class="sig-prename descclassname"><span class="pre">http2py.cli_maker.</span></span><span class="sig-name descname"><span class="pre">register_cli_method</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">openapi_spec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_auth_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/home/runner/.http2py/credentials.json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">binary_loads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/http2py/cli_maker.html#register_cli_method"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#http2py.cli_maker.register_cli_method" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a CLI-friendly function to instantiate an HttpClient with appropriate authentication
+arguments and call a particular method of the client instance</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>openapi_spec</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span>) – The OpenAPI spec used to make the client</p></li>
+<li><p><strong>client_method</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a></span>) – The instance method to wrap</p></li>
+<li><p><strong>expected_auth_kwargs</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – A list of authentication kwargs that the CLI should ask for
+(defaults to empty list)</p></li>
+<li><p><strong>config_filename</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The path to a JSON file to read for authentication kwargs
+(defaults to ~/.http2py/credentials.json)</p></li>
+<li><p><strong>profile</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The named profile to find in the config file</p></li>
+<li><p><strong>binary_loads</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a></span>) – How binary (octet-stream) responses are decoded (see
+<a class="reference internal" href="#http2py.cli_maker.mk_cli" title="http2py.cli_maker.mk_cli"><code class="xref py py-func docutils literal notranslate"><span class="pre">mk_cli()</span></code></a>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="http2py.client.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">http2py.client</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="http2py.authentication.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">http2py.authentication</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">http2py.cli_maker</a><ul>
+<li><a class="reference internal" href="#http2py.cli_maker.CLI_CONVENTION"><code class="docutils literal notranslate"><span class="pre">CLI_CONVENTION</span></code></a></li>
+<li><a class="reference internal" href="#http2py.cli_maker.dispatch_cli"><code class="docutils literal notranslate"><span class="pre">dispatch_cli()</span></code></a></li>
+<li><a class="reference internal" href="#http2py.cli_maker.mk_argparse_friendly"><code class="docutils literal notranslate"><span class="pre">mk_argparse_friendly()</span></code></a></li>
+<li><a class="reference internal" href="#http2py.cli_maker.mk_cli"><code class="docutils literal notranslate"><span class="pre">mk_cli()</span></code></a></li>
+<li><a class="reference internal" href="#http2py.cli_maker.mk_sig_argparse_friendly"><code class="docutils literal notranslate"><span class="pre">mk_sig_argparse_friendly()</span></code></a></li>
+<li><a class="reference internal" href="#http2py.cli_maker.register_cli_method"><code class="docutils literal notranslate"><span class="pre">register_cli_method()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=aaf63c28"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=fd10adb8"></script>
+    </body>
+</html>

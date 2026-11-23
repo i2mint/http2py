@@ -1,0 +1,8 @@
+API reference
+=============
+
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   http2py

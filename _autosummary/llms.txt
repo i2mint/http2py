@@ -1,0 +1,25 @@
+# http2py
+
+> Tools to create python binders to http web services.
+
+
+## Pages in this subsection
+
+- [http2py](http2py.html.md): Tools to make python objects that facade http requests.
+- [http2py.api_pkg_maker](http2py.api_pkg_maker.html.md): Generate an installable python package from an OpenAPI specification.
+- [http2py.authentication](http2py.authentication.html.md): Resolve credentials and build the auth callables that requests will use.
+- [http2py.cli_maker](http2py.cli_maker.html.md): Turn an http-bound python object into a command line interface.
+- [http2py.client](http2py.client.html.md): The main entry point: a python object facading an http service.
+- [http2py.constants](http2py.constants.html.md): Content-type strings shared across the request and response machinery.
+- [http2py.decorators](http2py.decorators.html.md): Response handling: map http status codes to exceptions, decode the payload.
+- [http2py.default_configs](http2py.default_configs.html.md): Default output transformations used when a method spec does not supply one.
+- [http2py.example_cli](http2py.example_cli.html.md): A tiny worked example of the CLI-making tools, used by the docs and by hand.
+- [http2py.global_state](http2py.global_state.html.md): Process-wide state (notably the shared &#96;requests&#96; session) for the clients.
+- [http2py.http2py_cls](http2py.http2py_cls.html.md): (Http) Requests for humans
+- [http2py.py2request](http2py.py2request.html.md): Won’t show the details here, but if you are used to it’s not that hard,
+- [http2py.testing_utils](http2py.testing_utils.html.md): Helpers for testing code that talks to an http service.
+- [http2py.util](http2py.util.html.md): Small general-purpose helpers: data files, dict defaults, JSON-ability checks.
+
+## Optional
+
+- [Top-level llms.txt](../llms.txt): Complete documentation index.

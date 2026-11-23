@@ -1,0 +1,12 @@
+http2py.client
+==============
+
+.. automodule:: http2py.client
+
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      HttpClient
+   

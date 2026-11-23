@@ -1,0 +1,25 @@
+﻿http2py
+=======
+
+.. automodule:: http2py
+
+   
+.. rubric:: Modules
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   api_pkg_maker
+   authentication
+   cli_maker
+   client
+   constants
+   decorators
+   default_configs
+   example_cli
+   global_state
+   http2py_cls
+   py2request
+   testing_utils
+   util

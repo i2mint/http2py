@@ -1,0 +1,12 @@
+http2py.authentication
+======================
+
+.. automodule:: http2py.authentication
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      mk_auth
+   

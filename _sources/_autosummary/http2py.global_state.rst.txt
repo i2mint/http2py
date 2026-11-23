@@ -1,0 +1,12 @@
+http2py.global\_state
+=====================
+
+.. automodule:: http2py.global_state
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_global_state
+   

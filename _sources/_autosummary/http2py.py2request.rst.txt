@@ -1,0 +1,33 @@
+http2py.py2request
+==================
+
+.. automodule:: http2py.py2request
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      DFLT_METHOD_FUNC_FROM_METHOD_SPEC
+      add_annots_from_openapi_props
+      all_necessary_fields_validator
+      check_url_template
+      default_path_to_func_name
+      extract_format_names
+      identity_func
+      mk_default_completion_validator
+      mk_method_spec_from_openapi_method_spec
+      mk_param_spec_from_arg_schema
+      mk_request_func_from_openapi_spec
+      mk_request_function
+      openapi_to_py
+      raw_response_on_error
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      DebugOptions
+      Py2Request
+      UrlMethodSpecsMaker
+   

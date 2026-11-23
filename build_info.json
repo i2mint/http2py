@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "built_at": "2026-11-23T07:12:15Z",
+  "package": {
+    "name": "http2py",
+    "version": "0.1.44",
+    "display_name": "http2py",
+    "source": "pyproject.toml"
+  },
+  "git": {
+    "available": true,
+    "commit": "640545b553b510de5f35fdbf750d1e0b5e32d766",
+    "short_commit": "640545b",
+    "branch": "master",
+    "tags": [
+      "0.1.44"
+    ],
+    "dirty": false,
+    "remote_url": "https://github.com/i2mint/http2py",
+    "commit_url": "https://github.com/i2mint/http2py/commit/640545b553b510de5f35fdbf750d1e0b5e32d766",
+    "error": null
+  },
+  "ci": {
+    "provider": "github",
+    "repository": "i2mint/http2py",
+    "sha": "4faaa879e49d49ca2d5f269f28fd9dc78ba6fd63",
+    "sha_in_history": true,
+    "ref": "refs/heads/master",
+    "ref_name": "master",
+    "run_id": "45129239861",
+    "run_url": "https://github.com/i2mint/http2py/actions/runs/45129239861",
+    "server_url": "https://github.com"
+  },
+  "tools": {
+    "epythet": "0.2.24",
+    "sphinx": "9.1.1",
+    "docutils": "0.22.4",
+    "python": "3.12.16"
+  },
+  "config": {
+    "theme": "auto",
+    "html_theme": "furo",
+    "accent": "#466400",
+    "mode": "auto",
+    "api_generator": "autosummary",
+    "ignore": [
+      "tests/",
+      "scrap/",
+      "examples/"
+    ],
+    "agent_outputs": true,
+    "aggregates": [
+      "md"
+    ],
+    "ai_artifacts": true,
+    "provenance": true,
+    "docs_dir": "docsrc"
+  },
+  "site": {
+    "modules_documented": 14,
+    "objects_documented": 25
+  },
+  "pypi": {
+    "checked": true,
+    "latest": "0.1.43",
+    "relation": "ahead",
+    "error": null
+  },
+  "reproduce": "git clone https://github.com/i2mint/http2py && cd http2py\ngit checkout 640545b553b510de5f35fdbf750d1e0b5e32d766\npip install \"epythet==0.2.24\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "warnings": [],
+  "alignment": {
+    "aligned": false,
+    "notes": [
+      "The documented version (0.1.44) is ahead of the latest release on PyPI (0.1.43): these docs describe unreleased code."
+    ]
+  }
+}

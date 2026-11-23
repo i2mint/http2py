@@ -1,0 +1,21 @@
+http2py.api\_pkg\_maker
+=======================
+
+.. automodule:: http2py.api_pkg_maker
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      OUTPUT_DIR
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      api_pkg_files
+      main
+      mk_api_pkg
+      object_ref
+   

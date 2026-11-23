@@ -1,0 +1,6 @@
+http2py.default\_configs
+========================
+
+.. automodule:: http2py.default_configs
+
+   

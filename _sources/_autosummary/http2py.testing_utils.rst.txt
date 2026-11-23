@@ -1,0 +1,18 @@
+http2py.testing\_utils
+======================
+
+.. automodule:: http2py.testing_utils
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      mk_unit_tests
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      MockHttpClient
+   

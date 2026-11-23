@@ -1,0 +1,12 @@
+http2py.example\_cli
+====================
+
+.. automodule:: http2py.example_cli
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      myfun
+   

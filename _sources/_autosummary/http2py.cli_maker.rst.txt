@@ -1,0 +1,22 @@
+http2py.cli\_maker
+==================
+
+.. automodule:: http2py.cli_maker
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      CLI_CONVENTION
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      dispatch_cli
+      mk_argparse_friendly
+      mk_cli
+      mk_sig_argparse_friendly
+      register_cli_method
+   
