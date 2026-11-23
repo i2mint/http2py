@@ -15,11 +15,13 @@ Say what the request looks like and what you want back from the response, and ge
 ```python
 from http2py import mk_request_function
 
-get_stars = mk_request_function({
-    'method': 'get',
-    'url_template': 'https://api.example.com/repos/{owner}/{name}',
-    'output_trans': lambda response: response.json()['stars'],
-})
+get_stars = mk_request_function(
+    {
+        "method": "get",
+        "url_template": "https://api.example.com/repos/{owner}/{name}",
+        "output_trans": lambda response: response.json()["stars"],
+    }
+)
 ```
 
 The result is meant to be a method, so its first argument (`self`) is ignored. It is called like this, and `dispatch=` is the seam that lets you swap the real `requests.request` for your own function, which is how you test without a network:
@@ -27,21 +29,25 @@ The result is meant to be a method, so its first argument (`self`) is ignored. I
 ```python
 class FakeResponse:
     def json(self):
-        return {'stars': 3}
+        return {"stars": 3}
+
 
 def fake_dispatch(method, url, **kwargs):
     print(method, url)
     return FakeResponse()
 
+
 get_stars = mk_request_function(
     {
-        'method': 'get',
-        'url_template': 'https://api.example.com/repos/{owner}/{name}',
-        'output_trans': lambda response: response.json()['stars'],
+        "method": "get",
+        "url_template": "https://api.example.com/repos/{owner}/{name}",
+        "output_trans": lambda response: response.json()["stars"],
     },
     dispatch=fake_dispatch,
 )
-get_stars(None, owner='thor', name='x')  # prints "get https://api.example.com/repos/thor/x", returns 3
+get_stars(
+    None, owner="thor", name="x"
+)  # prints "get https://api.example.com/repos/thor/x", returns 3
 ```
 
 For a service described by an OpenAPI spec, `http2py.HttpClient` builds one such function per route, and `mk_cli` makes a command line from it.
