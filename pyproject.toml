@@ -122,11 +122,6 @@ doctest_optionflags = [
 [tool.wads.ci]
 project_name = "http2py"
 
-[tool.wads.ci.docs]
-enabled = true
-builder = "epythet"
-ignore_paths = ["tests/", "scrap/", "examples/"]
-
 [tool.wads.ci.commands]
 pre_test = []
 test = []
@@ -188,8 +183,8 @@ wheel = true
 [tool.wads.ci.publish]
 enabled = true
 
-# No docs builder: commit 43aef24 removed docs/ and docsrc/ from this repo, and
-# the legacy CI's `epythet make . github` call is what turned the Publish job
-# red. Nothing here to build.
+# epythet generates docsrc/ from the package on each run (`epythet quickstart`).
 [tool.wads.ci.docs]
-enabled = false
+enabled = true
+builder = "epythet"
+ignore_paths = ["tests/", "scrap/", "examples/"]
